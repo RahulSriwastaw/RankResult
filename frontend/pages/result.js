@@ -18,6 +18,8 @@ import {
   Legend,
 } from 'chart.js';
 
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
 // Stat Card Component
 const StatCard = ({ label, value, color, delay }) => (
   <motion.div
