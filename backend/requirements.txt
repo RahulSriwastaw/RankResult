@@ -1,0 +1,11 @@
+Flask==2.3.3
+Flask-CORS==4.0.0
+Flask-SQLAlchemy==3.0.5
+# psycopg2-binary==2.9.6 # Commented out: Required only for PostgreSQL (fails compile on Python 3.14 without pg_config)
+redis==4.6.0
+python-dotenv==1.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+stripe==5.4.0
+PyJWT==2.8.0
+curl_cffi>=0.6.0
