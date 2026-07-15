@@ -278,8 +278,12 @@ function Users() {
       const data = await res.json();
       if (data.success) {
         alert(`✅ ${data.deleted} Users deleted`);
-        fetchUsers();
         setBulkSelected([]);
+        if (page === 1) {
+          fetchUsers();
+        } else {
+          setPage(1);
+        }
       } else {
         alert('❌ Error: ' + (data.error || ''));
       }
@@ -362,8 +366,15 @@ function Users() {
               <thead>
                 <tr className="bg-gray-700">
                   <th className="p-3 text-left w-10">
-                    <input type="checkbox" onChange={e => setBulkSelected(e.target.checked ? users.map(u => u.id) : [])}
-                      checked={bulkSelected.length === users.length && users.length > 0} className="w-4 h-4" />
+                    <input type="checkbox" onChange={e => {
+                      if (e.target.checked) {
+                        setBulkSelected(prev => [...new Set([...prev, ...users.map(u => u.id)])]);
+                      } else {
+                        const userIds = users.map(u => u.id);
+                        setBulkSelected(prev => prev.filter(id => !userIds.includes(id)));
+                      }
+                    }}
+                    checked={users.length > 0 && users.every(u => bulkSelected.includes(u.id))} className="w-4 h-4" />
                   </th>
                   <th className="p-3 text-left">ID</th>
                   <th className="p-3 text-left">नाम</th>
@@ -1112,8 +1123,12 @@ function Questions() {
       const data = await res.json();
       if (data.success) {
         showToast(`✅ ${data.deleted} Questions deleted`, 'success');
-        fetchQuestions();
         setBulkSelected([]);
+        if (page === 1) {
+          fetchQuestions();
+        } else {
+          setPage(1);
+        }
       } else {
         showToast('❌ Error: ' + (data.error || ''), 'error');
       }
@@ -1451,9 +1466,16 @@ function Questions() {
           <thead>
             <tr className="bg-gray-700">
               <th className="p-3 w-8">
-                <input type="checkbox" onChange={e => setBulkSelected(e.target.checked ? items.map(i => i.id) : [])}
-                  checked={bulkSelected.length === items.length && items.length > 0}
-                  className="rounded" />
+                <input type="checkbox" onChange={e => {
+                  if (e.target.checked) {
+                    setBulkSelected(prev => [...new Set([...prev, ...items.map(i => i.id)])]);
+                  } else {
+                    const itemIds = items.map(i => i.id);
+                    setBulkSelected(prev => prev.filter(id => !itemIds.includes(id)));
+                  }
+                }}
+                checked={items.length > 0 && items.every(i => bulkSelected.includes(i.id))}
+                className="rounded" />
               </th>
               <th className="p-3 text-left">ID / HTML ID</th>
               <th className="p-3 text-left">प्रश्न</th>

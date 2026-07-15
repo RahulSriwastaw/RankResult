@@ -17,6 +17,17 @@ def init_db(app):
     with app.app_context():
         db.create_all()
         if db.engine.dialect.name == 'sqlite':
+            from sqlalchemy import event
+            from sqlalchemy.engine import Engine
+            import sqlite3
+
+            @event.listens_for(Engine, "connect")
+            def set_sqlite_pragma(dbapi_connection, connection_record):
+                if isinstance(dbapi_connection, sqlite3.Connection):
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.close()
+
             _ensure_columns('exam_results', {
                 'application_photograph': 'application_photograph VARCHAR(500)',
                 'candidate_payload': 'candidate_payload JSON',

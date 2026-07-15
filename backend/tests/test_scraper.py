@@ -7,11 +7,12 @@ from db.models import db
 class ScraperTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        import os
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
         cls.app = create_app()
         cls.app.config['TESTING'] = True
         cls.app_context = cls.app.app_context()
         cls.app_context.push()
-        db.drop_all()
         db.create_all()
 
     @classmethod
@@ -33,6 +34,7 @@ class ScraperTests(unittest.TestCase):
             <input type="hidden" name="hidden_field" value="secret" />
             <table class="menu-tbl">
                 <tr><td>Question ID</td><td>111</td></tr>
+                <tr><td>Chosen Option</td><td>1</td></tr>
             </table>
             <td class="bold">1. What is 2+2?</td>
             <td class="rightAns">1. Four</td>

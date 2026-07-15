@@ -178,10 +178,10 @@ def get_result_from_url():
         if not isinstance(q, dict):
             continue
         qno = q.get('qno')
-        correct = q.get('correct_answer')
+        correct = q.get('correct_answer') or '—'
 
-        # Skip if no correct answer (DB requires it) or duplicate qno
-        if not correct or qno in saved_qnos:
+        # Skip if duplicate qno (missing correct answer uses placeholder '—' to avoid skipping)
+        if qno in saved_qnos:
             continue
         saved_qnos.add(qno)
 

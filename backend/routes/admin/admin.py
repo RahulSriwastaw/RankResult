@@ -16,7 +16,7 @@ def dashboard():
         total_users = User.query.count()
         total_exams = Exam.query.count()
         total_results = ExamResult.query.count()
-        total_questions = QuestionResponse.query.count()
+        total_questions = MasterQuestion.query.count()
         total_solutions = AISolution.query.count()
         total_points_earned = db.session.query(func.sum(UserPoints.total_earned)).scalar() or 0
         total_points_spent = db.session.query(func.sum(UserPoints.total_spent)).scalar() or 0
@@ -197,7 +197,11 @@ def bulk_delete_users():
 
         deleted_count = 0
         for uid in ids:
-            user = User.query.get(uid)
+            try:
+                uid_int = int(uid)
+            except (ValueError, TypeError):
+                continue
+            user = User.query.get(uid_int)
             if user:
                 # Due to FK CASCADE in models, this deletes Points, Transactions, Purchases, etc.
                 db.session.delete(user)
@@ -764,7 +768,11 @@ def bulk_delete_master_questions():
 
         deleted_count = 0
         for mq_id in ids:
-            mq = MasterQuestion.query.get(mq_id)
+            try:
+                mq_id_int = int(mq_id)
+            except (ValueError, TypeError):
+                continue
+            mq = MasterQuestion.query.get(mq_id_int)
             if mq:
                 db.session.delete(mq)
                 deleted_count += 1

@@ -146,6 +146,12 @@ def parse_result_html(html):
 
     # Extract participant details
     details_table = soup.find('table', class_='main-info-tbl')
+    if not details_table:
+        for tbl in soup.find_all('table'):
+            tbl_text = tbl.get_text()
+            if 'Roll Number' in tbl_text or 'Candidate Name' in tbl_text or 'Registration Number' in tbl_text:
+                details_table = tbl
+                break
     if details_table:
         for tr in details_table.find_all('tr'):
             tds = tr.find_all('td')
@@ -200,7 +206,32 @@ def parse_result_html(html):
     unattempted_count = 0
     total_marks = 0.0
 
-    question_panels = soup.find_all('div', class_='question-pnl')
+    # Find all question panels by class 'question-pnl' (matching any tag type like div, table, etc.)
+    question_panels = soup.find_all(class_='question-pnl')
+    
+    # Fallback: If we parsed less than 100 questions, check for table class 'questionRowTbl' or 'menu-tbl'
+    # which represent individual question blocks and option panels in TCS exams.
+    if len(question_panels) < 100:
+        found_panels = list(question_panels)
+        for tbl in soup.find_all('table', class_='questionRowTbl'):
+            # Find the parent container
+            parent = tbl.find_parent(class_=re.compile(r'question-pnl'))
+            if not parent:
+                parent = tbl.find_parent('div') or tbl.parent
+            if parent and parent not in found_panels:
+                found_panels.append(parent)
+        
+        # If we still don't have enough, try with menu-tbl
+        if len(found_panels) < 100:
+            for tbl in soup.find_all('table', class_='menu-tbl'):
+                parent = tbl.find_parent(class_=re.compile(r'question-pnl'))
+                if not parent:
+                    parent = tbl.find_parent('div') or tbl.parent
+                if parent and parent not in found_panels:
+                    found_panels.append(parent)
+        
+        question_panels = found_panels
+
     for panel in question_panels:
         q_div = panel
         
@@ -285,27 +316,30 @@ def parse_result_html(html):
 
         menu_tbl = q_div.find('table', class_='menu-tbl')
         if menu_tbl:
-            for row in menu_tbl.find_all('tr'):
-                cells = row.find_all('td')
-                if len(cells) < 2:
+            tds = menu_tbl.find_all('td')
+            for td in tds:
+                label = td.get_text(strip=True)
+                label_clean = label.replace(':', '').strip().lower()
+                if not label_clean:
                     continue
-
-                label = cells[0].get_text(strip=True)
-                value = cells[1].get_text(strip=True)
-                label_key = label.lower()
-
-                if 'question id' in label_key:
-                    question_id_html = value or question_id_html
-                elif 'option 1 id' in label_key:
-                    option_a_id = value or option_a_id
-                elif 'option 2 id' in label_key:
-                    option_b_id = value or option_b_id
-                elif 'option 3 id' in label_key:
-                    option_c_id = value or option_c_id
-                elif 'option 4 id' in label_key:
-                    option_d_id = value or option_d_id
-                elif 'chosen option' in label_key or 'chosen' in label_key:
-                    student_option = _normalize_option_value(value)
+                
+                is_label = any(x in label_clean for x in ['question type', 'question id', 'option 1 id', 'option 2 id', 'option 3 id', 'option 4 id', 'status', 'chosen option', 'chosen'])
+                if is_label:
+                    value_td = td.find_next('td')
+                    if value_td:
+                        value = value_td.get_text(strip=True)
+                        if 'question id' in label_clean:
+                            question_id_html = value or question_id_html
+                        elif 'option 1 id' in label_clean:
+                            option_a_id = value or option_a_id
+                        elif 'option 2 id' in label_clean:
+                            option_b_id = value or option_b_id
+                        elif 'option 3 id' in label_clean:
+                            option_c_id = value or option_c_id
+                        elif 'option 4 id' in label_clean:
+                            option_d_id = value or option_d_id
+                        elif 'chosen option' in label_clean or 'chosen' in label_clean:
+                            student_option = _normalize_option_value(value)
 
         if right_td:
             text = right_td.get_text(separator=' ', strip=True)
@@ -406,8 +440,99 @@ def parse_result_html(html):
     result['total_correct'] = correct_count
     result['total_wrong'] = wrong_count
     result['total_unattempted'] = unattempted_count
+
+    # ── Parse Section-wise summary table ────────────────────────────────────
+    # RRB digialm HTML has a summary table with Section | Total | NA | Right | Wrong | Marks
+    section_summary = []
     
+    # Look for section-wise table (has header row with 'Section'/'Right'/'Wrong'/'Marks' keywords)
+    for tbl in soup.find_all('table'):
+        header_text = tbl.get_text(separator='|').lower()
+        if ('right' in header_text or 'correct' in header_text) and ('wrong' in header_text) and ('section' in header_text or 'subject' in header_text):
+            rows = tbl.find_all('tr')
+            header_row = None
+            header_indices = {}
+            for i, row in enumerate(rows):
+                cells = row.find_all(['th', 'td'])
+                cell_texts = [c.get_text(strip=True).lower() for c in cells]
+                if any('section' in t or 'subject' in t for t in cell_texts):
+                    header_row = i
+                    for j, ct in enumerate(cell_texts):
+                        if 'section' in ct or 'subject' in ct:
+                            header_indices['section'] = j
+                        elif 'total' in ct and 'mark' not in ct:
+                            header_indices['total'] = j
+                        elif 'not attempt' in ct or ct == 'na':
+                            header_indices['na'] = j
+                        elif 'right' in ct or 'correct' in ct:
+                            header_indices['right'] = j
+                        elif 'wrong' in ct or 'incorrect' in ct:
+                            header_indices['wrong'] = j
+                        elif 'mark' in ct or 'score' in ct:
+                            header_indices['marks'] = j
+                    break
+            
+            if header_row is not None and 'section' in header_indices:
+                for row in rows[header_row + 1:]:
+                    cells = row.find_all(['th', 'td'])
+                    if not cells:
+                        continue
+                    row_text = row.get_text(separator='|').lower()
+                    # Skip total/summary rows
+                    if 'total' in row_text and len(cells) <= 2:
+                        continue
+                    
+                    def _get_cell(idx):
+                        if idx is not None and idx < len(cells):
+                            return cells[idx].get_text(strip=True)
+                        return None
+                    
+                    sec_name = _get_cell(header_indices.get('section'))
+                    if not sec_name or sec_name.lower() in ('total', 'grand total', ''):
+                        continue
+                    
+                    sec_total = _coerce_int(_get_cell(header_indices.get('total')))
+                    sec_na = _coerce_int(_get_cell(header_indices.get('na')))
+                    sec_right = _coerce_int(_get_cell(header_indices.get('right')))
+                    sec_wrong = _coerce_int(_get_cell(header_indices.get('wrong')))
+                    sec_marks = _coerce_float(_get_cell(header_indices.get('marks')))
+                    
+                    section_summary.append({
+                        'name': sec_name,
+                        'total': sec_total,
+                        'na': sec_na,
+                        'right': sec_right,
+                        'wrong': sec_wrong,
+                        'marks': round(sec_marks, 2) if sec_marks is not None else None,
+                    })
+            
+            if section_summary:
+                break
+    
+    # Fallback: if no section table found, build from questions grouped by section_name
+    if not section_summary:
+        section_groups = {}
+        for q in result['questions']:
+            sname = q.get('section_name') or 'Overall'
+            if sname not in section_groups:
+                section_groups[sname] = {'name': sname, 'total': 0, 'na': 0, 'right': 0, 'wrong': 0, 'marks': 0.0}
+            section_groups[sname]['total'] += 1
+            st = q.get('status', 'unattempted')
+            if st == 'correct':
+                section_groups[sname]['right'] += 1
+                section_groups[sname]['marks'] = round(section_groups[sname]['marks'] + 1.0, 2)
+            elif st == 'wrong':
+                section_groups[sname]['wrong'] += 1
+                section_groups[sname]['na'] += 0
+                section_groups[sname]['marks'] = round(section_groups[sname]['marks'] - 1/3, 2)
+            else:
+                section_groups[sname]['na'] += 1
+        section_summary = list(section_groups.values())
+
+    result['section_wise'] = section_summary
+
     print(f"[Scraper] Correct={correct_count}, Wrong={wrong_count}, Unattempted={unattempted_count}, Score={result['score']}")
     print(f"[Scraper] Candidate: {result['candidate_name']}, Roll: {result['roll_number']}")
+    print(f"[Scraper] Sections parsed: {len(section_summary)}")
 
     return result
