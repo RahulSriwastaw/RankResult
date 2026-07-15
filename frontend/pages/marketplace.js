@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaLock, FaUnlock, FaSearch, FaCoins, FaBookOpen,
-  FaCalendar, FaFilter, FaCheck, FaTimes, FaShoppingCart, FaUser
+  FaCalendar, FaFilter, FaCheck, FaTimes, FaShoppingCart, FaUser, FaChartLine
 } from 'react-icons/fa';
 
 const API = 'http://localhost:5000';
@@ -32,6 +32,9 @@ export default function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [packsLoading, setPacksLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState(null);
+  const [selectedShift, setSelectedShift] = useState(null);
+  const [shifts, setShifts] = useState([]);
+  const [shiftsLoading, setShiftsLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [qLoading, setQLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -70,26 +73,46 @@ export default function Marketplace() {
 
   const openExam = async (exam) => {
     setSelectedExam(exam);
+    setSelectedShift(null);
     setPage(1);
     setSearch('');
     setSelectedIds([]);
     setFilters({ subject: '', shift_date: '', shift_time: '' });
-    loadQuestions(exam.id, 1, '', { subject: '', shift_date: '', shift_time: '' });
+    loadShifts(exam.id);
   };
 
-  const loadQuestions = async (examId, pg, sq, activeFilters = filters) => {
+  const loadShifts = async (examId) => {
+    setShiftsLoading(true);
+    try {
+      const res = await fetch(`${API}/api/marketplace/exams/${examId}/shifts`, { headers: authHeaders });
+      const data = await res.json();
+      setShifts(Array.isArray(data.shifts) ? data.shifts : []);
+    } catch (e) { console.error(e); }
+    finally { setShiftsLoading(false); }
+  };
+
+  const openShift = (shift) => {
+    setSelectedShift(shift);
+    setPage(1);
+    setSearch('');
+    setSelectedIds([]);
+    loadQuestions(selectedExam.id, 1, '', shift);
+  };
+
+  const loadQuestions = async (examId, pg, sq, shift = null) => {
     setQLoading(true);
     try {
       let url = `${API}/api/marketplace/exams/${examId}/questions?page=${pg}&per_page=20`;
       if (sq) url += `&search=${encodeURIComponent(sq)}`;
-      if (activeFilters.subject) url += `&subject=${encodeURIComponent(activeFilters.subject)}`;
-      if (activeFilters.shift_date) url += `&shift_date=${encodeURIComponent(activeFilters.shift_date)}`;
-      if (activeFilters.shift_time) url += `&shift_time=${encodeURIComponent(activeFilters.shift_time)}`;
+      if (shift) {
+        url += `&shift_date=${encodeURIComponent(shift.test_date)}`;
+        url += `&shift_time=${encodeURIComponent(shift.test_time)}`;
+        url += `&shift_subject=${encodeURIComponent(shift.subject)}`;
+      }
       const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       setQuestions(Array.isArray(data.questions) ? data.questions : []);
       setTotalPages(data.pages || 1);
-      setFilterOptions(data.filters || { subjects: [], dates: [], times: [] });
       setSelectedExam(prev => ({ ...prev, is_purchased: data.is_purchased }));
     } catch (e) { console.error(e); }
     finally { setQLoading(false); }
@@ -99,12 +122,20 @@ export default function Marketplace() {
     setFilters(nextFilters);
     setPage(1);
     setSelectedIds([]);
-    loadQuestions(selectedExam.id, 1, search, nextFilters);
+    loadQuestions(selectedExam.id, 1, search, selectedShift);
   };
 
   const handleDownload = async () => {
-    if (!selectedExam) return;
-    const query = new URLSearchParams({ export: 'csv', page: 1, per_page: 500, search, ...filters });
+    if (!selectedExam || !selectedShift) return;
+    const query = new URLSearchParams({ 
+      export: 'csv', 
+      page: 1, 
+      per_page: 500, 
+      search,
+      shift_date: selectedShift.test_date,
+      shift_time: selectedShift.test_time,
+      shift_subject: selectedShift.subject,
+    });
     const url = `${API}/api/marketplace/exams/${selectedExam.id}/questions?${query.toString()}`;
     window.open(url, '_blank');
   };
@@ -164,25 +195,24 @@ export default function Marketplace() {
   const OPTION_LABELS = ['A', 'B', 'C', 'D'];
   const OPTION_COLORS = { A: '#60a5fa', B: '#c084fc', C: '#fbbf24', D: '#f87171' };
 
-  // ── Question Detail View ─────────────────────────────────────────────────
-  if (selectedExam) {
+  // ── Shift Selection View ─────────────────────────────────────────────────
+  if (selectedExam && !selectedShift) {
     return (
       <>
         <Head>
-          <title>{selectedExam.name} — Question Bank | RankVeda</title>
+          <title>{selectedExam.name} — Shifts | RankVeda</title>
         </Head>
         <div className="min-h-screen bg-gray-950 text-white">
           <NavBar user={user} />
           <div className="max-w-5xl mx-auto px-4 py-8">
-            {/* Header */}
             <div className="flex items-center gap-4 mb-6">
-              <button onClick={() => setSelectedExam(null)}
+              <button onClick={() => { setSelectedExam(null); setSelectedShift(null); }}
                 className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1">
-                ← Back
+                ← Back to Exams
               </button>
               <div>
                 <h1 className="text-2xl font-bold">{selectedExam.name}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{selectedExam.total_questions} Questions · {selectedExam.shifts} Shifts</p>
+                <p className="text-gray-400 text-sm mt-0.5">Select a shift to view questions</p>
               </div>
               {!selectedExam.is_purchased && (
                 <button onClick={() => buyItem(selectedExam, 'exam')}
@@ -197,35 +227,92 @@ export default function Marketplace() {
               )}
             </div>
 
-            {/* Search + Filters */}
+            {shiftsLoading ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full" />
+              </div>
+            ) : shifts.length === 0 ? (
+              <div className="text-center py-16 text-gray-500 bg-gray-900/50 border border-gray-800 rounded-2xl">
+                <FaCalendar className="text-4xl mx-auto mb-4 opacity-40" />
+                <p>No shifts available yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {shifts.map((shift) => (
+                  <motion.button key={`${shift.test_date}-${shift.test_time}-${shift.subject}`}
+                    onClick={() => openShift(shift)}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-left hover:border-indigo-600 transition">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{shift.subject}</h3>
+                        <p className="text-sm text-gray-400 mt-1">{shift.test_date} · {shift.test_time}</p>
+                      </div>
+                      <span className="bg-indigo-900/50 text-indigo-400 text-sm font-bold px-3 py-1 rounded-full">
+                        {shift.question_count} Qs
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-indigo-400 text-sm font-medium group">
+                      View Questions <FaChartLine className="group-hover:translate-x-1 transition" />
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ── Question Detail View ─────────────────────────────────────────────────
+  if (selectedExam && selectedShift) {
+    return (
+      <>
+        <Head>
+          <title>{selectedExam.name} — Question Bank | RankVeda</title>
+        </Head>
+        <div className="min-h-screen bg-gray-950 text-white">
+          <NavBar user={user} />
+          <div className="max-w-5xl mx-auto px-4 py-8">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+              <button onClick={() => setSelectedShift(null)}
+                className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1">
+                ← Back to Shifts
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold">{selectedExam.name}</h1>
+                <p className="text-gray-400 text-sm mt-0.5">{selectedShift.subject} · {selectedShift.test_date} {selectedShift.test_time}</p>
+              </div>
+              {!selectedExam.is_purchased && (
+                <button onClick={() => buyItem(selectedExam, 'exam')}
+                  className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold text-sm">
+                  <FaShoppingCart /> Unlock — {selectedExam.price} Points
+                </button>
+              )}
+              {selectedExam.is_purchased && (
+                <div className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-green-900/40 border border-green-700 text-green-400 text-sm font-medium">
+                  <FaUnlock /> Purchased ✅
+                </div>
+              )}
+            </div>
+
+            {/* Search + Download */}
             <div className="space-y-3 mb-6">
               <div className="relative">
                 <FaSearch className="absolute left-4 top-3.5 text-gray-500" />
                 <input
                   value={search}
-                  onChange={e => { setSearch(e.target.value); loadQuestions(selectedExam.id, 1, e.target.value, filters); }}
-                  placeholder="Search questions..."
+                  onChange={e => { setSearch(e.target.value); loadQuestions(selectedExam.id, 1, e.target.value, selectedShift); }}
+                  placeholder="Search questions in this shift..."
                   className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
-              <div className="flex flex-wrap gap-3">
-                <select value={filters.subject} onChange={e => applyFilters({ ...filters, subject: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
-                  <option value="">All Subjects</option>
-                  {filterOptions.subjects.map(option => <option key={option} value={option}>{option}</option>)}
-                </select>
-                <select value={filters.shift_date} onChange={e => applyFilters({ ...filters, shift_date: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
-                  <option value="">All Dates</option>
-                  {filterOptions.dates.map(option => <option key={option} value={option}>{option}</option>)}
-                </select>
-                <select value={filters.shift_time} onChange={e => applyFilters({ ...filters, shift_time: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
-                  <option value="">All Times</option>
-                  {filterOptions.times.map(option => <option key={option} value={option}>{option}</option>)}
-                </select>
-                <button onClick={() => { setFilters({ subject: '', shift_date: '', shift_time: '' }); setPage(1); loadQuestions(selectedExam.id, 1, search, { subject: '', shift_date: '', shift_time: '' }); }} className="rounded-xl border border-gray-700 px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
-                  <FaFilter /> Clear
-                </button>
-                <button onClick={handleDownload} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white">⬇ Download CSV</button>
-              </div>
+              <button onClick={handleDownload} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white flex items-center gap-2">
+                ⬇ Download {selectedShift.subject} Shift ({selectedShift.question_count} Qs)
+              </button>
             </div>
 
             {/* Questions List */}

@@ -48,21 +48,25 @@ def list_marketplace_exams():
         result = []
         for exam in exams:
             # Count unique master questions in this exam (via shifts JSON)
-            total_questions = MasterQuestion.query.filter(
-                MasterQuestion.shifts.contains([{'exam_id': exam.id}])
-            ).count()
-
-            # Get all unique subjects and dates from this exam's questions
+            # Need to check all MasterQuestions since contains() filter won't work with type mismatch
             mqs = MasterQuestion.query.filter(
                 MasterQuestion.shifts != None
             ).all()
+            
+            total_questions = 0
             subjects = set()
             dates = set()
+            
             for mq in mqs:
                 for s in (mq.shifts or []):
-                    if s.get('exam_id') == exam.id:
-                        if s.get('subject'): subjects.add(s['subject'])
-                        if s.get('test_date'): dates.add(s['test_date'])
+                    # Convert to string for comparison since shifts store exam_id as string
+                    if str(s.get('exam_id')) == str(exam.id):
+                        total_questions += 1
+                        if s.get('subject'): 
+                            subjects.add(s['subject'])
+                        if s.get('test_date'): 
+                            dates.add(s['test_date'])
+                        break  # Only count each question once even if multiple shifts
 
             # Check if current user has purchased
             purchased = False
@@ -88,16 +92,57 @@ def list_marketplace_exams():
         return jsonify({'error': str(e)}), 500
 
 
-# ── Questions for an Exam (with blur if not purchased) ────────────────────────
+# ── List all Shifts for an Exam ──────────────────────────────────────────
+
+@marketplace_bp.route('/exams/<int:exam_id>/shifts', methods=['GET'])
+def exam_shifts(exam_id):
+    try:
+        current_user = get_current_user()
+        is_purchased = False
+        if current_user:
+            is_purchased = ExamPurchase.query.filter_by(
+                user_id=current_user.id, exam_id=exam_id
+            ).first() is not None
+
+        exam = Exam.query.get_or_404(exam_id)
+        all_mqs = MasterQuestion.query.filter(MasterQuestion.shifts != None).all()
+
+        # Collect all unique shifts for this exam with question counts
+        shifts_dict = {}
+        for mq in all_mqs:
+            for s in (mq.shifts or []):
+                if str(s.get('exam_id')) == str(exam_id):
+                    shift_key = (s.get('test_date'), s.get('test_time'), s.get('subject'))
+                    if shift_key not in shifts_dict:
+                        shifts_dict[shift_key] = {
+                            'test_date': s.get('test_date'),
+                            'test_time': s.get('test_time'),
+                            'subject': s.get('subject'),
+                            'question_count': 0,
+                        }
+                    shifts_dict[shift_key]['question_count'] += 1
+
+        shifts_list = sorted(shifts_dict.values(), key=lambda x: (x['test_date'], x['test_time']))
+
+        return jsonify({
+            'exam': {'id': exam.id, 'name': exam.name, 'price': exam.price or 0},
+            'shifts': shifts_list,
+            'is_purchased': is_purchased,
+        })
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 
 @marketplace_bp.route('/exams/<int:exam_id>/questions', methods=['GET'])
 def exam_questions(exam_id):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
-        subject = request.args.get('subject', '').strip()
+        # Shift filters (required to show questions for specific shift)
         shift_date = request.args.get('shift_date', '').strip()
         shift_time = request.args.get('shift_time', '').strip()
+        shift_subject = request.args.get('shift_subject', '').strip()
         search = request.args.get('search', '').strip()
         export_mode = request.args.get('export', '').strip().lower()
 
@@ -116,22 +161,20 @@ def exam_questions(exam_id):
         all_mqs = all_mqs.all()
 
         matched_items = []
-        subjects = set()
-        dates = set()
-        times = set()
 
         for mq in all_mqs:
             exam_shifts = []
             for s in (mq.shifts or []):
-                if s.get('exam_id') == exam_id:
-                    if s.get('subject'):
-                        subjects.add(s['subject'])
-                    if s.get('test_date'):
-                        dates.add(s['test_date'])
-                    if s.get('test_time'):
-                        times.add(s['test_time'])
-                    if (not subject or s.get('subject') == subject) and (not shift_date or s.get('test_date') == shift_date) and (not shift_time or s.get('test_time') == shift_time):
-                        exam_shifts.append(s)
+                # Convert to string for comparison since shifts store exam_id as string
+                if str(s.get('exam_id')) == str(exam_id):
+                    # Filter by specific shift if provided
+                    if (shift_date and s.get('test_date') != shift_date):
+                        continue
+                    if (shift_time and s.get('test_time') != shift_time):
+                        continue
+                    if (shift_subject and s.get('subject') != shift_subject):
+                        continue
+                    exam_shifts.append(s)
             if exam_shifts:
                 matched_items.append((mq, exam_shifts))
 
@@ -169,11 +212,11 @@ def exam_questions(exam_id):
             'per_page': per_page,
             'pages': (total + per_page - 1) // per_page,
             'is_purchased': is_purchased,
-            'filters': {
-                'subjects': sorted(subjects),
-                'dates': sorted(dates),
-                'times': sorted(times),
-            },
+            'shift': {
+                'date': shift_date,
+                'time': shift_time,
+                'subject': shift_subject,
+            }
         }
 
         if export_mode == 'csv':
