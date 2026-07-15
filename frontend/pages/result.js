@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaShareAlt, FaMoon, FaSun, FaCoins, FaChevronDown, FaChevronUp,
   FaDownload, FaShoppingBag, FaUser, FaCheckCircle, FaTimesCircle,
-  FaClock, FaTrophy, FaPercent, FaBullseye
+  FaClock, FaTrophy, FaPercent, FaBullseye, FaThumbsUp, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 import { useTheme } from 'next-themes';
 import { Doughnut, Bar } from 'react-chartjs-2';
@@ -21,10 +21,12 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-const QuestionItem = ({ q, resultId, onUnlock }) => {
+const QuestionItem = ({ q, resultId, onUnlock, authUser }) => {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [solution, setSolution] = useState(q.solution || null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [solutions, setSolutions] = useState(q.solutions || []);
+  const [solIndex, setSolIndex] = useState(0);
 
   const isCorrect = q.student_answer && q.student_answer === q.correct_answer;
   const isWrong = q.student_answer && q.student_answer !== q.correct_answer;
@@ -35,13 +37,67 @@ const QuestionItem = ({ q, resultId, onUnlock }) => {
   const handleUnlock = async () => {
     setLoading(true);
     try {
-      const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/unlock`, { user_id: 1 });
-      setSolution(res.data.solution);
+      const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/unlock`, { 
+        user_id: authUser?.id || 1 
+      });
+      setSolutions(res.data.solutions);
+      setIsUnlocked(true);
       if (onUnlock) onUnlock(res.data.newBalance);
-      toast.success('Solution unlocked!');
+      toast.success('Solutions unlocked!');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error occurred');
     } finally { setLoading(false); }
+  };
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/generate`, { 
+        user_id: authUser?.id || 1 
+      });
+      const tempSol = res.data.solution;
+      setSolutions(prev => [...prev, tempSol]);
+      setSolIndex(solutions.length); // jump to the new one
+      if (onUnlock) onUnlock(res.data.newBalance);
+      toast.success('Temporary solution generated!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error occurred');
+    } finally { setLoading(false); }
+  };
+
+  const handlePublish = async (tempSol) => {
+    setLoading(true);
+    try {
+      const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/publish`, {
+        user_id: authUser?.id || 1,
+        solution: tempSol
+      });
+      // Replace temp solution with published one from server
+      setSolutions(prev => {
+        const arr = [...prev];
+        arr[solIndex] = res.data.solution;
+        return arr;
+      });
+      toast.success('Solution published successfully!');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error occurred');
+    } finally { setLoading(false); }
+  };
+
+  const handleLike = async (solId) => {
+    // Cannot like temporary solutions
+    if (String(solId).startsWith('temp_')) return;
+    try {
+      const res = await axios.post(`http://localhost:5000/api/questions/solutions/${solId}/like`, { user_id: authUser?.id || 1 });
+      setSolutions(prev => {
+        const updated = prev.map(s => s.id === solId ? { ...s, likes: res.data.likes } : s);
+        return updated.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      });
+      setSolIndex(0);
+      toast.success('Solution liked!');
+    } catch (err) {
+      toast.error('Failed to like solution');
+    }
   };
 
   return (
@@ -49,7 +105,7 @@ const QuestionItem = ({ q, resultId, onUnlock }) => {
       <div className="flex items-center justify-between p-3 cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-bold text-gray-500 w-8 shrink-0">Q{q.question_no}</span>
-          <span className="text-sm text-gray-300 truncate">{q.question_text || `Question ${q.question_no}`}</span>
+          <span className="text-sm text-gray-300 truncate" dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           <span className={`text-xs px-2 py-0.5 rounded-full text-white font-bold ${badge[status]}`}>
@@ -61,26 +117,105 @@ const QuestionItem = ({ q, resultId, onUnlock }) => {
       <AnimatePresence>
         {expanded && (
           <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-            <div className="px-4 pb-3 pt-1 border-t border-white/10 text-sm space-y-1.5">
-              <p><span className="text-gray-500">Your Answer:</span> <span className={isWrong ? 'text-red-400 font-bold' : 'text-gray-300'}>{q.student_answer || '—'}</span></p>
-              <p><span className="text-gray-500">Correct Answer:</span> <span className="text-green-400 font-bold">{q.correct_answer}</span></p>
-              <p><span className="text-gray-500">Marks:</span> <span className="font-bold">{q.marks_awarded}</span></p>
-              {status === 'wrong' && (
-                <div className="mt-2">
-                  {solution ? (
-                    <div className="p-3 bg-indigo-900/40 rounded-xl border border-indigo-700/30">
-                      <p className="font-bold text-indigo-400 mb-1">🤖 AI Solution</p>
-                      <p className="text-gray-300 text-sm">{solution.explanation}</p>
-                      {solution.why_wrong && <p className="mt-1 text-orange-300 text-xs"><span className="font-medium">Why wrong:</span> {solution.why_wrong}</p>}
+            <div className="px-4 pb-3 pt-3 border-t border-white/10 text-sm space-y-3">
+              {/* Options rendering */}
+              <div className="space-y-2 mt-2">
+                {['a', 'b', 'c', 'd'].map(opt => {
+                  const optText = q.parsed_payload?.[`option_${opt}_text`];
+                  const optId = q.parsed_payload?.[`option_${opt}_id`];
+                  if (!optText) return null;
+                  const isOptCorrect = q.parsed_payload?.correct_option_text === optText;
+                  const isOptSelected = q.student_option_text === optText;
+                  let optStyle = 'border-gray-700 bg-gray-800/30 text-gray-300';
+                  if (isOptCorrect) optStyle = 'border-green-500 bg-green-900/30 text-green-300 font-bold';
+                  else if (isOptSelected && !isOptCorrect) optStyle = 'border-red-500 bg-red-900/30 text-red-300';
+                  
+                  return (
+                    <div key={opt} className={`p-2 border rounded-lg ${optStyle} flex gap-2 items-start`}>
+                      <span className="font-medium shrink-0 uppercase">{opt}.</span>
+                      <span dangerouslySetInnerHTML={{ __html: optText }}></span>
+                      {isOptSelected && <span className="ml-auto text-xs opacity-70">(Your Answer)</span>}
+                      {isOptCorrect && <span className="ml-auto text-xs opacity-70">(Correct Answer)</span>}
                     </div>
-                  ) : (
-                    <button onClick={handleUnlock} disabled={loading}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-xs transition disabled:opacity-50 flex items-center gap-2">
-                      <FaCoins /> {loading ? 'Unlocking...' : 'Unlock AI Solution (5 pts)'}
-                    </button>
-                  )}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+
+              <div className="pt-2 border-t border-gray-700/50 flex flex-wrap gap-4 text-xs text-gray-400">
+                 <p><span className="text-gray-500">Marks:</span> <span className="font-bold">{q.marks_awarded}</span></p>
+                 <p><span className="text-gray-500">Question ID:</span> <span>{q.question_id_html || 'N/A'}</span></p>
+                 <p><span className="text-gray-500">Chosen Option ID:</span> <span>{q.option_id || 'N/A'}</span></p>
+              </div>
+              
+              {/* AI Solution Section */}
+              <div className="mt-2 pt-2 border-t border-white/10">
+                {isUnlocked ? (
+                  <div className="p-3 bg-indigo-900/40 rounded-xl border border-indigo-700/30">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="font-bold text-indigo-400 flex items-center gap-2">
+                        🤖 AI Solutions {solutions.length > 0 && <span className="text-xs text-indigo-300">({solIndex + 1}/{solutions.length})</span>}
+                      </p>
+                      
+                      {/* Only allow generation if total saved solutions < 5 and we haven't hit the limit of temps */}
+                      {solutions.filter(s => !s.is_temporary).length < 5 && (
+                        <button onClick={handleGenerate} disabled={loading} className="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-1 rounded text-white disabled:opacity-50">
+                          {loading ? '...' : '+ Generate Your Own (5 pts)'}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {solutions.length > 0 ? (
+                      <div className="relative mt-3">
+                        {solutions.length > 1 && (
+                          <>
+                            <button onClick={() => setSolIndex(prev => Math.max(0, prev - 1))} disabled={solIndex === 0} className="absolute left-[-10px] top-1/2 -translate-y-1/2 p-1.5 bg-black/50 text-white rounded-full disabled:opacity-0 hover:bg-black/80 transition z-10">
+                              <FaChevronLeft className="text-xs" />
+                            </button>
+                            <button onClick={() => setSolIndex(prev => Math.min(solutions.length - 1, prev + 1))} disabled={solIndex === solutions.length - 1} className="absolute right-[-10px] top-1/2 -translate-y-1/2 p-1.5 bg-black/50 text-white rounded-full disabled:opacity-0 hover:bg-black/80 transition z-10">
+                              <FaChevronRight className="text-xs" />
+                            </button>
+                          </>
+                        )}
+                        
+                        <div className="px-6 min-h-[60px]">
+                          {solutions[solIndex].is_temporary && (
+                            <div className="mb-2 inline-block bg-yellow-600/30 text-yellow-300 text-[10px] px-2 py-0.5 rounded border border-yellow-600/50 uppercase font-bold">
+                              Temporary Preview
+                            </div>
+                          )}
+                          <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">{solutions[solIndex].explanation}</p>
+                          {solutions[solIndex].why_wrong && (
+                            <p className="mt-2 text-orange-300 text-xs"><span className="font-medium">Insights:</span> {solutions[solIndex].why_wrong}</p>
+                          )}
+                          <div className="mt-3 flex justify-between items-center">
+                             <div className="text-xs text-gray-500">By: {solutions[solIndex].user_name || 'AI'}</div>
+                             <div className="flex gap-2 items-center">
+                               {solutions[solIndex].is_temporary ? (
+                                  <button onClick={() => handlePublish(solutions[solIndex])} disabled={loading} className="text-xs bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg transition font-medium">
+                                    {loading ? 'Saving...' : 'Save to Public'}
+                                  </button>
+                               ) : (
+                                  <button onClick={() => handleLike(solutions[solIndex].id)} className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-900/50 hover:bg-indigo-800/50 border border-indigo-700/50 px-3 py-1.5 rounded-full transition">
+                                    <FaThumbsUp /> {solutions[solIndex].likes || 0}
+                                  </button>
+                               )}
+                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-sm text-gray-400">
+                         No public solutions yet. Be the first to generate one!
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button onClick={handleUnlock} disabled={loading}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg text-xs transition disabled:opacity-50 flex items-center gap-2">
+                    <FaCoins /> {loading ? 'Unlocking...' : 'Show Solutions (5 pts)'}
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -284,14 +419,6 @@ export default function ResultPage() {
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {authUser && <span className="text-xs text-gray-400 hidden sm:block">👤 {authUser.name}</span>}
-            <button onClick={() => handleDownload('image')} disabled={downloading}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50">
-              <FaDownload className="text-xs" /> {downloading ? '...' : 'PNG'}
-            </button>
-            <button onClick={() => handleDownload('pdf')} disabled={downloading}
-              className="flex items-center gap-1.5 bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition disabled:opacity-50">
-              <FaDownload className="text-xs" /> PDF
-            </button>
             <button onClick={handleShare}
               className="flex items-center gap-1.5 bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
               <FaShareAlt className="text-xs" /> Share
@@ -324,7 +451,7 @@ export default function ResultPage() {
             ))}
           </div>
 
-          {/* MARKSHEET CARD */}
+          {/* MARKSHEET CARD — full width */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <h2 className="text-lg font-bold">🎫 Official Score Card</h2>
@@ -339,7 +466,7 @@ export default function ResultPage() {
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto rounded-xl shadow-2xl ring-1 ring-white/10">
+            <div className="w-full shadow-2xl ring-1 ring-white/10 rounded-2xl overflow-hidden">
               <MarksheetCard ref={marksheetRef} candidate={candidateForCard} score={scoreForCard} rank={rankForCard} />
             </div>
           </motion.div>
@@ -431,12 +558,23 @@ export default function ResultPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-700">
-              {filteredQs.map((q, idx) => (
-                <motion.div key={q.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.008 }}>
-                  <QuestionItem q={q} resultId={result.id} onUnlock={(nb) => setBalance(nb)} />
-                </motion.div>
-              ))}
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-700">
+              {Array.from(new Set(filteredQs.map(q => q.parsed_payload?.section_name || 'Overall'))).map((sectionName) => {
+                const sectionQs = filteredQs.filter(q => (q.parsed_payload?.section_name || 'Overall') === sectionName);
+                if (sectionQs.length === 0) return null;
+                return (
+                  <div key={sectionName} className="space-y-2">
+                    <h4 className="text-indigo-300 font-semibold text-sm bg-gray-800/50 p-2 rounded-lg">{sectionName}</h4>
+                    <div className="space-y-2">
+                      {sectionQs.map((q, idx) => (
+                        <motion.div key={q.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.008 }}>
+                          <QuestionItem q={q} resultId={result.id} onUnlock={(nb) => setBalance(nb)} authUser={authUser} />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
               {filteredQs.length === 0 && <p className="text-center text-gray-600 py-10 text-sm">No questions in this filter</p>}
             </div>
           </div>

@@ -153,39 +153,72 @@ def parse_result_html(html):
                 details_table = tbl
                 break
     if details_table:
+        def _process_kv_pair(raw_key, val):
+            """Map a label-value pair to result fields."""
+            key = raw_key.replace(' ', '').replace('_', '').replace('-', '').lower()
+            val = (val or '').strip()
+            if not val:
+                return
+            if 'registrationno' in key or 'registrationnumber' in key:
+                result['registration_number'] = val
+            elif 'rollno' in key or 'rollnumber' in key:
+                result['roll_number'] = val
+            elif 'candidatename' in key:
+                result['candidate_name'] = val
+            elif 'community' in key:
+                result['community'] = val
+            elif 'testcentername' in key or 'testcentrename' in key or 'testcenter' in key:
+                result['test_centre_name'] = val
+            elif 'testdate' in key:
+                result['test_date'] = val
+            elif 'testtime' in key:
+                result['test_time'] = val
+            elif 'subject' in key:
+                result['subject'] = val
+            elif 'rank' in key and 'category' not in key and 'percentile' not in key:
+                rank_value = _coerce_int(val)
+                if rank_value is not None:
+                    result['rank'] = rank_value
+            elif 'percentile' in key:
+                percentile_value = _coerce_float(val)
+                if percentile_value is not None:
+                    result['percentile'] = round(percentile_value, 2)
+            elif 'categoryrank' in key:
+                category_rank_value = _coerce_int(val)
+                if category_rank_value is not None:
+                    result['category_rank'] = category_rank_value
+            elif 'score' in key or 'marksobtained' in key or 'totalmarks' in key:
+                score_value = _coerce_float(val)
+                if score_value is not None:
+                    result['score'] = round(score_value, 2)
+            elif key == 'category':
+                result['category'] = val or result['category']
+
         for tr in details_table.find_all('tr'):
             tds = tr.find_all('td')
+            if len(tds) == 0:
+                continue
+            # Horizontal layout: label | value | label | value ... in one row
+            if len(tds) >= 4 and len(tds) % 2 == 0:
+                is_horizontal = True
+                for i in range(0, len(tds), 2):
+                    label_txt = tds[i].get_text(strip=True)
+                    label_key = label_txt.replace(' ', '').replace('_', '').replace('-', '').lower()
+                    # Heuristic: if even cells look like labels (contain known keywords)
+                    if not any(kw in label_key for kw in ['roll', 'reg', 'candidate', 'community', 'test', 'subject', 'date', 'time', 'score', 'rank', 'mark', 'category', 'center', 'centre']):
+                        is_horizontal = False
+                        break
+                if is_horizontal:
+                    for i in range(0, len(tds) - 1, 2):
+                        raw_key = tds[i].get_text(strip=True)
+                        val = tds[i + 1].get_text(strip=True)
+                        _process_kv_pair(raw_key, val)
+                    continue
+            # Vertical layout: 2-column table (label | value per row)
             if len(tds) >= 2:
                 raw_key = tds[0].get_text(strip=True)
-                key = raw_key.replace(' ', '').replace('_', '').replace('-', '').lower()
                 val = tds[1].get_text(strip=True)
-
-                if 'registrationno' in key: result['registration_number'] = val
-                elif 'rollno' in key or 'rollnumber' in key: result['roll_number'] = val
-                elif 'candidatename' in key: result['candidate_name'] = val
-                elif 'community' in key: result['community'] = val
-                elif 'testcentername' in key or 'testcentrename' in key: result['test_centre_name'] = val
-                elif 'testdate' in key: result['test_date'] = val
-                elif 'testtime' in key: result['test_time'] = val
-                elif 'subject' in key: result['subject'] = val
-                elif 'rank' in key and 'category' not in key and 'percentile' not in key:
-                    rank_value = _coerce_int(val)
-                    if rank_value is not None:
-                        result['rank'] = rank_value
-                elif 'percentile' in key:
-                    percentile_value = _coerce_float(val)
-                    if percentile_value is not None:
-                        result['percentile'] = round(percentile_value, 2)
-                elif 'categoryrank' in key or 'categoryrank' in raw_key.replace(' ', '').lower():
-                    category_rank_value = _coerce_int(val)
-                    if category_rank_value is not None:
-                        result['category_rank'] = category_rank_value
-                elif 'score' in key or 'marksobtained' in key or 'totalmarks' in key:
-                    score_value = _coerce_float(val)
-                    if score_value is not None:
-                        result['score'] = round(score_value, 2)
-                elif 'category' == key:
-                    result['category'] = val or result['category']
+                _process_kv_pair(raw_key, val)
 
     img_tag = soup.find('img')
     if img_tag and img_tag.has_attr('src'):
@@ -232,18 +265,9 @@ def parse_result_html(html):
         
         question_panels = found_panels
 
-    for panel in question_panels:
+    for idx, panel in enumerate(question_panels):
         q_div = panel
-        
-        qno_match = re.search(r'Question ID :.*?(\d+)', q_div.get_text())
-        qno = qno_match.group(1) if qno_match else "0"
-
-        # Try to find the question number from the header if the ID match fails to get sequential number
-        header_num = q_div.find('td', class_='bold', string=re.compile(r'Q\.\d+'))
-        if header_num:
-            m = re.search(r'Q\.(\d+)', header_num.get_text())
-            if m:
-                qno = m.group(1)
+        qno = str(idx + 1)
 
         def _parse_option_label(text):
             if not text:
@@ -304,6 +328,7 @@ def parse_result_html(html):
         correct_option_text = None
         student_option = None
         student_option_text_raw = None
+        option_id = None
         option_a_id = None
         option_b_id = None
         option_c_id = None
@@ -313,6 +338,16 @@ def parse_result_html(html):
         option_b_text = None
         option_c_text = None
         option_d_text = None
+
+        section_name = None
+        section_id = None
+        
+        # Section Info
+        section_lbl = q_div.find_previous(class_=re.compile(r'section-lbl|grp-lbl'))
+        if section_lbl:
+            section_name = section_lbl.get_text(strip=True)
+            section_id = section_lbl.get('id') or section_name
+
 
         menu_tbl = q_div.find('table', class_='menu-tbl')
         if menu_tbl:
@@ -367,12 +402,16 @@ def parse_result_html(html):
 
         if student_option == '1':
             student_option_text_raw = option_a_text
+            option_id = option_a_id
         elif student_option == '2':
             student_option_text_raw = option_b_text
+            option_id = option_b_id
         elif student_option == '3':
             student_option_text_raw = option_c_text
+            option_id = option_c_id
         elif student_option == '4':
             student_option_text_raw = option_d_text
+            option_id = option_d_id
 
         # Marks calculation
         marks = 0.0
@@ -400,6 +439,7 @@ def parse_result_html(html):
             'qno': qno,
             'question_text': question_text,
             'question_id_html': question_id_html,
+            'option_id': option_id,
             'html_fields': generic_question_fields,
             'raw_question_html': str(q_div),
             'raw_option_html': str(q_div.find('table', class_='menu-tbl') or ''),
@@ -409,8 +449,8 @@ def parse_result_html(html):
             'video_url': None,
             'question_type': 'unknown',
             'question_status': 'parsed',
-            'section_name': None,
-            'section_id': None,
+            'section_name': section_name,
+            'section_id': section_id,
             'question_group': None,
             'question_language': None,
             'passage_id': None,

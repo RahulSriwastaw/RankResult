@@ -30,6 +30,22 @@ const EXAMS = [
     topics: ['Mathematics (30)', 'General Awareness (40)', 'Reasoning (30)'],
   },
   {
+    slug: 'ntpc-cbt2',
+    name: 'NTPC CBT-II',
+    year: '2025',
+    fullName: 'Railway NTPC Computer Based Test-II',
+    desc: '100 questions | 90 min | GA, Math, Reasoning',
+    badge: 'Active',
+    badgeColor: 'bg-indigo-900/60 text-indigo-400 border-indigo-700/50',
+    icon: '🚉',
+    color: 'from-indigo-600/20 to-purple-600/20',
+    border: 'border-indigo-700/30',
+    href: '/exams/ntpc-cbt2',
+    examId: 7,
+    pattern: { sections: 3, questions: 100, duration: 90, marking: '+1 / -⅓' },
+    topics: ['General Awareness (40)', 'Mathematics (30)', 'Reasoning (30)'],
+  },
+  {
     slug: 'ssc-cgl',
     name: 'SSC CGL',
     year: '2025',
@@ -118,7 +134,7 @@ const webPageSchema = {
   alternateName: 'RankVeda Exam Marks Calculator',
   description: 'RankVeda is India\'s free platform to check RRB NTPC, SSC, Bank exam answer keys, calculate marks with negative marking, predict rank and download professional score card.',
   url: SITE_URL,
-  inLanguage: 'hi-IN',
+  inLanguage: 'en-IN',
   potentialAction: {
     '@type': 'SearchAction',
     target: `${SITE_URL}/result?url={search_term_string}&exam={exam_id}`,
@@ -148,7 +164,7 @@ const orgSchema = {
     '@type': 'ContactPoint',
     telephone: '+91-XXXXXXXXXX',
     contactType: 'customer support',
-    availableLanguage: ['Hindi', 'English'],
+    availableLanguage: ['English'],
   },
 };
 
@@ -202,7 +218,7 @@ export default function Home() {
         <link rel="canonical" href={SITE_URL} />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
         <meta name="author" content="RankVeda" />
-        <meta name="language" content="hi-IN, en-IN" />
+        <meta name="language" content="en-IN" />
         <meta name="theme-color" content="#1a1a2e" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         
@@ -217,8 +233,7 @@ export default function Home() {
         <meta property="og:description" content="Free answer key calculator for RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP. Calculate exact marks with negative marking, predict live rank & percentile, download score card." />
         <meta property="og:url" content={SITE_URL} />
         <meta property="og:site_name" content="RankVeda" />
-        <meta property="og:locale" content="hi_IN" />
-        <meta property="og:locale:alternate" content="en_IN" />
+        <meta property="og:locale" content="en_IN" />
         <meta property="og:image" content={`${SITE_URL}/og-image.png`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -240,8 +255,6 @@ export default function Home() {
 
         {/* Additional SEO */}
         <link rel="sitemap" href={`${SITE_URL}/sitemap.xml`} />
-        <link rel="alternate" href={`${SITE_URL}/?lang=en`} hreflang="en" />
-        <link rel="alternate" href={`${SITE_URL}/?lang=hi`} hreflang="hi" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://rrb.digialm.com" />
@@ -281,20 +294,20 @@ export default function Home() {
               🇮🇳 India's #1 Free Exam Score Calculator
             </div>
 
-            <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
-              Apna Exam Select Karein<br />
-              <span className="gradient-text">turant Score & Rank Paayein</span>
+              <h1 className="text-4xl md:text-6xl font-black leading-tight mb-4">
+              Select Your Exam<br />
+              <span className="gradient-text">Get Instant Score & Rank</span>
             </h1>
             <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto mb-6">
-              RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP — neeche diye gaye exams mein se 
-              apna exam chunein aur answer key check karein. Free, fast aur professional score card ke saath.
+              RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP — choose your exam from below 
+              and check the answer key. Free, fast with a professional score card.
             </p>
 
             <div className="inline-flex items-center gap-2 bg-gray-900 border border-gray-700 text-sm px-4 py-2 rounded-full mb-4">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <FaUsers className="text-indigo-400" />
               <span className="font-bold text-white" suppressHydrationWarning>{(liveCount || 24580).toLocaleString()}+</span>
-              <span className="text-gray-500">candidates ne apna score check kiya</span>
+              <span className="text-gray-500">candidates checked their scores</span>
             </div>
           </motion.div>
         </section>
@@ -303,7 +316,7 @@ export default function Home() {
         <section className="max-w-7xl mx-auto px-4 pb-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-black mb-2">📋 Exams</h2>
-            <p className="text-gray-500 text-sm">Apna exam chunein aur answer key check karein</p>
+            <p className="text-gray-500 text-sm">Choose your exam and check the answer key</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -347,11 +360,11 @@ export default function Home() {
                       <div className="pt-2 border-t border-white/10">
                         {isActive ? (
                           <span className="text-xs text-indigo-400 font-medium flex items-center gap-1">
-                            Answer Key Check Karein <FaArrowRight className="text-xs group-hover:translate-x-1 transition" />
+                            Check Answer Key <FaArrowRight className="text-xs group-hover:translate-x-1 transition" />
                           </span>
                         ) : (
                           <span className="text-xs text-gray-500 flex items-center gap-1">
-                            <FaClock className="text-xs" /> Jald Aa Rahein Hain
+                            <FaClock className="text-xs" /> Coming Soon
                           </span>
                         )}
                       </div>
@@ -365,13 +378,13 @@ export default function Home() {
 
         {/* STEPS */}
         <section className="max-w-7xl mx-auto px-4 py-12 border-t border-gray-800">
-          <h2 className="text-2xl font-black mb-2 text-center">Kaise Kaam Karta Hai?</h2>
-          <p className="text-gray-500 text-sm text-center mb-8">3 simple steps mein apna result jaanen</p>
+          <h2 className="text-2xl font-black mb-2 text-center">How It Works?</h2>
+          <p className="text-gray-500 text-sm text-center mb-8">Know your result in 3 simple steps</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { num: '1', title: 'Exam Chunein', desc: 'Upar diye gaye exams mein se apna exam select karein.', icon: '👆' },
-              { num: '2', title: 'URL Paste Karein', desc: 'digialm.com se response sheet URL copy karke paste karein.', icon: '📋' },
-              { num: '3', title: 'Score Dekhein', desc: 'Section-wise score, rank, percentile dekhein aur score card download karein.', icon: '🏆' },
+              { num: '1', title: 'Choose Exam', desc: 'Select your exam from the list above.', icon: '👆' },
+              { num: '2', title: 'Paste URL', desc: 'Copy the response sheet URL from digialm.com and paste it.', icon: '📋' },
+              { num: '3', title: 'View Score', desc: 'See section-wise score, rank, percentile and download score card.', icon: '🏆' },
             ].map((s, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="text-center">
                 <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-2xl mb-4">{s.icon}</div>
@@ -385,16 +398,16 @@ export default function Home() {
 
         {/* FEATURES */}
         <section className="max-w-7xl mx-auto px-4 py-10 border-t border-gray-800">
-          <h2 className="text-2xl font-black mb-2 text-center">Kyun RankVeda?</h2>
-          <p className="text-gray-500 text-sm text-center mb-8">Sab kuch ek jagah — Free, Fast, Professional</p>
+          <h2 className="text-2xl font-black mb-2 text-center">Why RankVeda?</h2>
+          <p className="text-gray-500 text-sm text-center mb-8">Everything in one place — Free, Fast, Professional</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: FaChartLine, title: 'Section-wise Analysis', desc: 'Har section ke Right, Wrong, NA aur Marks alag dekhein.', color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
-              { icon: FaTrophy, title: 'Live Rank & Percentile', desc: 'Real-time rank calculation. Jaanein aap kitne candidates se aage hain.', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
-              { icon: FaDownload, title: 'Score Card Download', desc: 'Official-style score card PNG aur PDF mein download karein.', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
-              { icon: FaRobot, title: 'AI Solution Unlock', desc: 'Galat questions ke detailed AI explanations unlock karein.', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
-              { icon: FaCheckCircle, title: 'Negative Marking', desc: 'Automatic -1/3, -0.5, -0.25 negative marking official pattern ke hisaab se.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
-              { icon: FaBookOpen, title: 'Question Bank', desc: 'Sabhi shifts ke questions ek jagah. Practice aur revision karein.', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
+              { icon: FaChartLine, title: 'Section-wise Analysis', desc: 'View Right, Wrong, NA and Marks for each section separately.', color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/20' },
+              { icon: FaTrophy, title: 'Live Rank & Percentile', desc: 'Real-time rank calculation. Know how many candidates you are ahead of.', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+              { icon: FaDownload, title: 'Score Card Download', desc: 'Download official-style score card in PNG and PDF format.', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' },
+              { icon: FaRobot, title: 'AI Solution Unlock', desc: 'Unlock detailed AI explanations for incorrect questions.', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/20' },
+              { icon: FaCheckCircle, title: 'Negative Marking', desc: 'Automatic -1/3, -0.5, -0.25 negative marking as per official pattern.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+              { icon: FaBookOpen, title: 'Question Bank', desc: 'All shifts questions in one place. Practice and revise.', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' },
             ].map(({ icon: Icon, title, desc, color, bg }, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.08 }} className={`${bg} border rounded-xl p-5`}>
                 <Icon className={`${color} text-2xl mb-3`} />
@@ -411,18 +424,18 @@ export default function Home() {
             <article>
               <h2 className="text-xl font-black mb-3">RRB NTPC UG Answer Key 2025</h2>
               <p className="text-sm text-gray-400 leading-relaxed">
-                RankVeda par <strong className="text-gray-200">RRB NTPC Under Graduate (UG)</strong> ki answer key instantly check karein. 
-                Apni digialm.com response sheet URL se exact marks (negative marking ke saath), 
+                Check the <strong className="text-gray-200">RRB NTPC Under Graduate (UG)</strong> answer key instantly on RankVeda. 
+                Get your exact marks (with negative marking), 
                 section-wise score (Mathematics 30, General Awareness 40, Reasoning 30), 
-                aur live rank paayein.
+                and live rank from your digialm.com response sheet URL.
               </p>
             </article>
             <article>
               <h2 className="text-xl font-black mb-3">Score Card Download Kyun?</h2>
               <p className="text-sm text-gray-400 leading-relaxed">
-                RankVeda ki <strong className="text-gray-200">professional score card</strong> mein aapka photo, registration number, 
-                roll number, section-wise breakdown, rank aur percentile sab kuch hota hai. 
-                Ise PNG ya PDF mein download karke share kar sakte hain.
+                The <strong className="text-gray-200">professional score card</strong> from RankVeda includes your photo, registration number, 
+                roll number, section-wise breakdown, rank and percentile. 
+                You can download it as PNG or PDF and share it.
               </p>
             </article>
           </div>

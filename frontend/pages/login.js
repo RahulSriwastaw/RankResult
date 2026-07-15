@@ -48,13 +48,13 @@ export default function LoginPage() {
       // Save token and user
       localStorage.setItem('rv_token', data.token);
       localStorage.setItem('rv_user', JSON.stringify(data.user));
-      setSuccess(mode === 'login' ? 'Login सफल! Redirect हो रहे हैं...' : 'Account बन गया! Welcome 🎉');
+      setSuccess(mode === 'login' ? 'Login successful! Redirecting...' : 'Account created! Welcome 🎉');
       setTimeout(() => {
         const redirect = router.query.redirect || '/';
         router.push(redirect);
       }, 1000);
     } catch (err) {
-      setError('Network error. Backend चल रहा है?');
+      setError('Network error. Is the backend running?');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function LoginPage() {
     <>
       <Head>
         <title>{mode === 'login' ? 'Login' : 'Register'} — RankVeda</title>
-        <meta name="description" content="RankVeda में login करें और अपना exam result, rank और AI solution देखें।" />
+        <meta name="description" content="Login to RankVeda to view your exam result, rank and AI solution." />
       </Head>
 
       <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 relative overflow-hidden">
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   <motion.div key="name"
                     initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}>
-                    <label className="text-xs text-gray-400 mb-1 block">आपका नाम</label>
+                    <label className="text-xs text-gray-400 mb-1 block">Your Name</label>
                     <div className="relative">
                       <FaUser className="absolute left-3 top-3.5 text-gray-500 text-sm" />
                       <input
@@ -187,14 +187,14 @@ export default function LoginPage() {
                 {loading ? (
                   <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
                 ) : (
-                  <><FaRocket /> {mode === 'login' ? 'Login करें' : 'Account बनाएं'}</>
+                  <><FaRocket /> {mode === 'login' ? 'Login' : 'Create Account'}</>
                 )}
               </button>
             </form>
           </div>
 
           <p className="text-center text-gray-600 text-xs mt-6">
-            <Link href="/" className="text-indigo-400 hover:text-indigo-300">← वापस Home पर जाएं</Link>
+            <Link href="/" className="text-indigo-400 hover:text-indigo-300">← Back to Home</Link>
           </p>
         </motion.div>
       </div>

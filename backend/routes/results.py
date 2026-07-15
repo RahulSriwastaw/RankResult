@@ -37,7 +37,7 @@ def get_result_from_url():
             print("[API] Parsing HTML...")
             parsed = parse_result_html(html)
             if parsed and len(parsed.get('questions', [])) > 0:
-                print(f"[API] Parsed {len(parsed['questions'])} questions ✅")
+                print(f"[API] Parsed {len(parsed['questions'])} questions OK")
             else:
                 print("[API] 0 questions parsed. Invalid HTML or unsupported format.")
                 parsed = None
@@ -68,17 +68,30 @@ def get_result_from_url():
         existing_result = ExamResult.query.filter_by(exam_id=exam_id, registration_number=registration_number).first()
 
     if existing_result:
-        print(f"[API] Result already exists for roll/reg: {roll_number or registration_number}. Returning cached result.")
+        print(f"[API] Result already exists for roll/reg: {roll_number or registration_number}. Checking questions...")
         questions = (
             QuestionResponse.query
             .filter_by(result_id=existing_result.id)
             .order_by(QuestionResponse.question_no)
             .all()
         )
-        return jsonify({
-            'result': existing_result.to_dict(),
-            'questions': [q.to_dict() for q in questions]
-        })
+        # If questions exist, check if complete
+        parsed_q_count = len(parsed.get('questions', []))
+        if len(questions) > 0:
+            if parsed_q_count > 0 and len(questions) != parsed_q_count:
+                print(f"[API] Cached result has {len(questions)} questions but parsed has {parsed_q_count}. Deleting old cache to re-insert.")
+                QuestionResponse.query.filter_by(result_id=existing_result.id).delete()
+                db.session.commit()
+                # fall through to re-parse and insert
+            else:
+                print(f"[API] Returning cached result with {len(questions)} questions")
+                return jsonify({
+                    'result': existing_result.to_dict(),
+                    'questions': [q.to_dict() for q in questions]
+                })
+        # Questions missing — fall through to re-parse and insert
+        print(f"[API] Cached result has 0 questions — will re-parse and insert questions")
+        new_result = existing_result
 
     def _coerce_datetime(value):
         if isinstance(value, datetime):
@@ -93,73 +106,53 @@ def get_result_from_url():
                 return None
         return None
 
-    # If not found, create new one
+    # If not found (or re-parsing cached result that has 0 questions), create/skip ExamResult
     roll_number = roll_number or str(uuid.uuid4())[:8]
     parsed_at = _coerce_datetime(parsed.get('parsed_at'))
 
-    try:
-        new_result = ExamResult(
-            user_id=None,
-            exam_id=exam_id,
-            registration_number=registration_number,
-            roll_number=roll_number,
-            candidate_name=parsed.get('candidate_name'),
-            community=parsed.get('community'),
-            test_centre_name=parsed.get('test_centre_name'),
-            test_date=parsed.get('test_date'),
-            test_time=parsed.get('test_time'),
-            subject=parsed.get('subject'),
-            photo_url=parsed.get('photo_url'),
-            application_photograph=parsed.get('application_photograph') or parsed.get('photo_url'),
-            candidate_payload=parsed.get('candidate_payload') or {},
-            source_html=parsed.get('source_html'),
-            parser_version=parsed.get('parser_version', 'rankveda-parser-v1.0'),
-            parsed_at=parsed_at,
-            score=parsed.get('score', 0) or 0,
-            rank=parsed.get('rank', 0) or 0,
-            percentile=parsed.get('percentile', 0) or 0,
-            category_rank=parsed.get('category_rank', 0) or 0,
-            category=parsed.get('category', 'UR') or 'UR',
-            section_wise=parsed.get('section_wise', {}) or {},
-            total_correct=parsed.get('total_correct', 0),
-            total_wrong=parsed.get('total_wrong', 0),
-            total_unattempted=parsed.get('total_unattempted', 0)
-        )
-        db.session.add(new_result)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-        # Roll number already exists — generate a unique one and retry
-        roll_number = str(uuid.uuid4())[:12]
-        new_result = ExamResult(
-            user_id=None,
-            exam_id=exam_id,
-            registration_number=registration_number,
-            roll_number=roll_number,
-            candidate_name=parsed.get('candidate_name'),
-            community=parsed.get('community'),
-            test_centre_name=parsed.get('test_centre_name'),
-            test_date=parsed.get('test_date'),
-            test_time=parsed.get('test_time'),
-            subject=parsed.get('subject'),
-            photo_url=parsed.get('photo_url'),
-            application_photograph=parsed.get('application_photograph') or parsed.get('photo_url'),
-            candidate_payload=parsed.get('candidate_payload') or {},
-            source_html=parsed.get('source_html'),
-            parser_version=parsed.get('parser_version', 'rankveda-parser-v1.0'),
-            parsed_at=parsed_at,
-            score=parsed.get('score', 0) or 0,
-            rank=parsed.get('rank', 0) or 0,
-            percentile=parsed.get('percentile', 0) or 0,
-            category_rank=parsed.get('category_rank', 0) or 0,
-            category=parsed.get('category', 'UR') or 'UR',
-            section_wise=parsed.get('section_wise', {}) or {},
-            total_correct=parsed.get('total_correct', 0),
-            total_wrong=parsed.get('total_wrong', 0),
-            total_unattempted=parsed.get('total_unattempted', 0)
-        )
-        db.session.add(new_result)
-        db.session.commit()
+    # new_result is set to existing_result in the re-parse path above; otherwise create fresh
+    if 'new_result' not in locals():
+        new_result = None
+
+    if new_result is None:
+        def _build_result(rn):
+            return ExamResult(
+                user_id=None,
+                exam_id=exam_id,
+                registration_number=registration_number,
+                roll_number=rn,
+                candidate_name=parsed.get('candidate_name'),
+                community=parsed.get('community'),
+                test_centre_name=parsed.get('test_centre_name'),
+                test_date=parsed.get('test_date'),
+                test_time=parsed.get('test_time'),
+                subject=parsed.get('subject'),
+                photo_url=parsed.get('photo_url'),
+                application_photograph=parsed.get('application_photograph') or parsed.get('photo_url'),
+                candidate_payload=parsed.get('candidate_payload') or {},
+                source_html=parsed.get('source_html'),
+                parser_version=parsed.get('parser_version', 'rankveda-parser-v1.0'),
+                parsed_at=parsed_at,
+                score=parsed.get('score', 0) or 0,
+                rank=parsed.get('rank', 0) or 0,
+                percentile=parsed.get('percentile', 0) or 0,
+                category_rank=parsed.get('category_rank', 0) or 0,
+                category=parsed.get('category', 'UR') or 'UR',
+                section_wise=parsed.get('section_wise', {}) or {},
+                total_correct=parsed.get('total_correct', 0),
+                total_wrong=parsed.get('total_wrong', 0),
+                total_unattempted=parsed.get('total_unattempted', 0)
+            )
+        try:
+            new_result = _build_result(roll_number)
+            db.session.add(new_result)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            roll_number = str(uuid.uuid4())[:12]
+            new_result = _build_result(roll_number)
+            db.session.add(new_result)
+            db.session.commit()
 
     # ── 4. Save QuestionResponses with master question mapping ─────────────
     saved_qnos = set()
@@ -186,6 +179,7 @@ def get_result_from_url():
         saved_qnos.add(qno)
 
         try:
+            db.session.begin_nested()
             q_text = q.get('question_text') or ''
             q_hash = MasterQuestion.generate_hash(q_text)
             q_id_html = q.get('question_id_html')
@@ -240,15 +234,20 @@ def get_result_from_url():
                 master_question_id=mq.id,
                 option_id=q.get('option_id'),
                 parsed_payload=q,
-                student_answer=q.get('student_answer'),
+                student_answer=(q.get('student_answer') or '')[:10],
                 student_option_text=q.get('student_option_text'),
                 marks_awarded=q.get('marks', 0) or 0,
                 status=q.get('status', 'unattempted')
             )
+            # Set correct_answer directly for DB NOT NULL compat
+            try:
+                qr.correct_answer = (mq.correct_answer or correct or '0')[:10]
+            except Exception:
+                pass
             db.session.add(qr)
             db.session.flush()
         except Exception as ex:
-            db.session.rollback()
+            db.session.rollback() # Rolls back only to SAVEPOINT
             print(f"[API] Question insert error: {ex}")
             continue
 

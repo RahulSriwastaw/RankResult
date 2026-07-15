@@ -28,7 +28,9 @@ export default function Marketplace() {
   const router = useRouter();
   const { user, token } = useAuth();
   const [exams, setExams] = useState([]);
+  const [packs, setPacks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [packsLoading, setPacksLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [qLoading, setQLoading] = useState(false);
@@ -38,8 +40,11 @@ export default function Marketplace() {
   const [buyMsg, setBuyMsg] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({ subject: '', shift_date: '', shift_time: '' });
+  const [filterOptions, setFilterOptions] = useState({ subjects: [], dates: [], times: [] });
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  useEffect(() => { fetchExams(); }, [user]);
+  useEffect(() => { fetchExams(); fetchPacks(); }, [user]);
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -53,33 +58,67 @@ export default function Marketplace() {
     finally { setLoading(false); }
   };
 
+  const fetchPacks = async () => {
+    setPacksLoading(true);
+    try {
+      const res = await fetch(`${API}/api/marketplace/packs`, { headers: authHeaders });
+      const data = await res.json();
+      setPacks(Array.isArray(data.packs) ? data.packs : []);
+    } catch (e) { console.error(e); }
+    finally { setPacksLoading(false); }
+  };
+
   const openExam = async (exam) => {
     setSelectedExam(exam);
     setPage(1);
     setSearch('');
-    loadQuestions(exam.id, 1, '');
+    setSelectedIds([]);
+    setFilters({ subject: '', shift_date: '', shift_time: '' });
+    loadQuestions(exam.id, 1, '', { subject: '', shift_date: '', shift_time: '' });
   };
 
-  const loadQuestions = async (examId, pg, sq) => {
+  const loadQuestions = async (examId, pg, sq, activeFilters = filters) => {
     setQLoading(true);
     try {
       let url = `${API}/api/marketplace/exams/${examId}/questions?page=${pg}&per_page=20`;
       if (sq) url += `&search=${encodeURIComponent(sq)}`;
+      if (activeFilters.subject) url += `&subject=${encodeURIComponent(activeFilters.subject)}`;
+      if (activeFilters.shift_date) url += `&shift_date=${encodeURIComponent(activeFilters.shift_date)}`;
+      if (activeFilters.shift_time) url += `&shift_time=${encodeURIComponent(activeFilters.shift_time)}`;
       const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       setQuestions(Array.isArray(data.questions) ? data.questions : []);
       setTotalPages(data.pages || 1);
+      setFilterOptions(data.filters || { subjects: [], dates: [], times: [] });
       setSelectedExam(prev => ({ ...prev, is_purchased: data.is_purchased }));
     } catch (e) { console.error(e); }
     finally { setQLoading(false); }
   };
 
-  const buyExam = async (exam) => {
+  const applyFilters = (nextFilters) => {
+    setFilters(nextFilters);
+    setPage(1);
+    setSelectedIds([]);
+    loadQuestions(selectedExam.id, 1, search, nextFilters);
+  };
+
+  const handleDownload = async () => {
+    if (!selectedExam) return;
+    const query = new URLSearchParams({ export: 'csv', page: 1, per_page: 500, search, ...filters });
+    const url = `${API}/api/marketplace/exams/${selectedExam.id}/questions?${query.toString()}`;
+    window.open(url, '_blank');
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const buyItem = async (item, kind = 'exam') => {
     if (!user) {
       router.push(`/login?redirect=/marketplace`);
       return;
     }
-    setBuyModal(exam);
+    setBuyModal({ ...item, kind });
     setBuyMsg('');
   };
 
@@ -87,10 +126,16 @@ export default function Marketplace() {
     setBuying(true);
     setBuyMsg('');
     try {
-      const res = await fetch(`${API}/api/marketplace/purchase`, {
+      const endpoint = buyModal.kind === 'pack'
+        ? `${API}/api/marketplace/packs/${buyModal.id}/purchase`
+        : `${API}/api/marketplace/purchase`;
+      const payload = buyModal.kind === 'pack'
+        ? { pack_id: buyModal.id }
+        : { exam_id: buyModal.id };
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ exam_id: buyModal.id }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -100,10 +145,15 @@ export default function Marketplace() {
         u.balance = data.new_balance;
         localStorage.setItem('rv_user', JSON.stringify(u));
         fetchExams();
-        setTimeout(() => {
-          setBuyModal(null);
-          openExam({ ...buyModal, is_purchased: true });
-        }, 1500);
+        fetchPacks();
+        if (buyModal.kind === 'exam') {
+          setTimeout(() => {
+            setBuyModal(null);
+            openExam({ ...buyModal, is_purchased: true });
+          }, 1500);
+        } else {
+          setTimeout(() => setBuyModal(null), 1200);
+        }
       } else {
         setBuyMsg('❌ ' + (data.error || 'Purchase failed'));
       }
@@ -128,16 +178,16 @@ export default function Marketplace() {
             <div className="flex items-center gap-4 mb-6">
               <button onClick={() => setSelectedExam(null)}
                 className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1">
-                ← वापस
+                ← Back
               </button>
               <div>
                 <h1 className="text-2xl font-bold">{selectedExam.name}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{selectedExam.total_questions} प्रश्न · {selectedExam.shifts} Shifts</p>
+                <p className="text-gray-400 text-sm mt-0.5">{selectedExam.total_questions} Questions · {selectedExam.shifts} Shifts</p>
               </div>
               {!selectedExam.is_purchased && (
-                <button onClick={() => buyExam(selectedExam)}
+                <button onClick={() => buyItem(selectedExam, 'exam')}
                   className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold text-sm">
-                  <FaShoppingCart /> Unlock करें — {selectedExam.price} Points
+                  <FaShoppingCart /> Unlock — {selectedExam.price} Points
                 </button>
               )}
               {selectedExam.is_purchased && (
@@ -147,15 +197,35 @@ export default function Marketplace() {
               )}
             </div>
 
-            {/* Search */}
-            <div className="relative mb-6">
-              <FaSearch className="absolute left-4 top-3.5 text-gray-500" />
-              <input
-                value={search}
-                onChange={e => { setSearch(e.target.value); loadQuestions(selectedExam.id, 1, e.target.value); }}
-                placeholder="प्रश्न में खोजें..."
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+            {/* Search + Filters */}
+            <div className="space-y-3 mb-6">
+              <div className="relative">
+                <FaSearch className="absolute left-4 top-3.5 text-gray-500" />
+                <input
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); loadQuestions(selectedExam.id, 1, e.target.value, filters); }}
+                  placeholder="Search questions..."
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <select value={filters.subject} onChange={e => applyFilters({ ...filters, subject: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
+                  <option value="">All Subjects</option>
+                  {filterOptions.subjects.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <select value={filters.shift_date} onChange={e => applyFilters({ ...filters, shift_date: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
+                  <option value="">All Dates</option>
+                  {filterOptions.dates.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <select value={filters.shift_time} onChange={e => applyFilters({ ...filters, shift_time: e.target.value })} className="rounded-xl bg-gray-900 border border-gray-800 px-3 py-2 text-sm text-white">
+                  <option value="">All Times</option>
+                  {filterOptions.times.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
+                <button onClick={() => { setFilters({ subject: '', shift_date: '', shift_time: '' }); setPage(1); loadQuestions(selectedExam.id, 1, search, { subject: '', shift_date: '', shift_time: '' }); }} className="rounded-xl border border-gray-700 px-3 py-2 text-sm text-gray-300 flex items-center gap-2">
+                  <FaFilter /> Clear
+                </button>
+                <button onClick={handleDownload} className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white">⬇ Download CSV</button>
+              </div>
             </div>
 
             {/* Questions List */}
@@ -171,6 +241,7 @@ export default function Marketplace() {
                     transition={{ delay: i * 0.03 }}
                     className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-indigo-800 transition">
                     <div className="flex items-start gap-3 mb-4">
+                      <input type="checkbox" checked={selectedIds.includes(q.id)} onChange={() => toggleSelect(q.id)} className="mt-1 accent-indigo-500" />
                       <span className="bg-indigo-900/50 text-indigo-400 text-xs font-bold px-2.5 py-1 rounded-full shrink-0 mt-0.5">
                         Q{i + 1 + (page - 1) * 20}
                       </span>
@@ -204,16 +275,26 @@ export default function Marketplace() {
 
                     {q.is_locked && (
                       <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                        <FaLock /> उत्तर देखने के लिए Unlock करें
+                        <FaLock /> Unlock to view answer
                       </div>
                     )}
 
                     <div className="mt-3 flex gap-2 flex-wrap">
-                      {q.shifts?.slice(0, 3).map((s, si) => (
-                        <span key={si} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
-                          {s.test_date} · {s.subject}
+                      {q.shift_info?.subject && (
+                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                          {q.shift_info.subject}
                         </span>
-                      ))}
+                      )}
+                      {q.shift_info?.test_date && (
+                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                          {q.shift_info.test_date}
+                        </span>
+                      )}
+                      {q.shift_info?.test_time && (
+                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                          {q.shift_info.test_time}
+                        </span>
+                      )}
                       {q.shift_count > 1 && (
                         <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-0.5 rounded-full">
                           +{q.shift_count - 1} shifts
@@ -225,19 +306,23 @@ export default function Marketplace() {
               </div>
             )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-6 flex justify-center gap-2 flex-wrap">
-                <button onClick={() => { setPage(p => Math.max(1, p - 1)); loadQuestions(selectedExam.id, Math.max(1, page - 1), search); }}
-                  disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">‹</button>
-                {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => { setPage(p); loadQuestions(selectedExam.id, p, search); }}
-                    className={`px-3 py-1.5 rounded-lg text-sm ${page === p ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'}`}>{p}</button>
-                ))}
-                <button onClick={() => { setPage(p => Math.min(totalPages, p + 1)); loadQuestions(selectedExam.id, Math.min(totalPages, page + 1), search); }}
-                  disabled={page === totalPages} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">›</button>
+            <div className="mt-6 flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm text-gray-400">
+                {selectedIds.length > 0 ? `${selectedIds.length} selected for quick export` : 'Select questions for bulk actions'}
               </div>
-            )}
+              {totalPages > 1 && (
+                <div className="flex justify-center gap-2 flex-wrap">
+                  <button onClick={() => { setPage(p => Math.max(1, p - 1)); loadQuestions(selectedExam.id, Math.max(1, page - 1), search, filters); }}
+                    disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">‹</button>
+                  {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => { setPage(p); loadQuestions(selectedExam.id, p, search, filters); }}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${page === p ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'}`}>{p}</button>
+                  ))}
+                  <button onClick={() => { setPage(p => Math.min(totalPages, p + 1)); loadQuestions(selectedExam.id, Math.min(totalPages, page + 1), search, filters); }}
+                    disabled={page === totalPages} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">›</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </>
@@ -249,7 +334,7 @@ export default function Marketplace() {
     <>
       <Head>
         <title>Question Bank Marketplace — RankVeda</title>
-        <meta name="description" content="सभी competitive exams का Question Bank। RRB NTPC, SSC, Banking — सभी shifts के questions एक जगह।" />
+        <meta name="description" content="Question Bank for all competitive exams. RRB NTPC, SSC, Banking — all shifts questions at one place." />
       </Head>
 
       <div className="min-h-screen bg-gray-950 text-white">
@@ -270,11 +355,52 @@ export default function Marketplace() {
                 </span>
               </h1>
               <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                सभी shifts के questions, correct answers और AI solutions — एक जगह।
-                Points खर्च करें, unlimited access पाएं।
+                All shifts questions, correct answers and AI solutions — at one place.
+                Spend points, get unlimited access.
               </p>
             </motion.div>
           </div>
+        </div>
+
+        {/* Pack Cards */}
+        <div className="max-w-5xl mx-auto px-4 pb-8">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-2">📦 Question Bank Packs</h2>
+            <p className="text-gray-400 text-sm">Buy a bundle of exams at once and unlock every exam inside the pack.</p>
+          </div>
+          {packsLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full" />
+            </div>
+          ) : packs.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 bg-gray-900/50 border border-gray-800 rounded-2xl">
+              <p>No pack offers available yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+              {packs.map((pack, i) => (
+                <motion.div key={pack.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-bold">{pack.name}</h3>
+                      <p className="text-sm text-gray-400 mt-2">{pack.description || 'Bundle multiple exams into one unlock.'}</p>
+                    </div>
+                    {pack.purchased ? (
+                      <span className="text-xs px-3 py-1.5 rounded-full bg-green-900/40 border border-green-700 text-green-400">Purchased</span>
+                    ) : (
+                      <span className="text-xs px-3 py-1.5 rounded-full bg-amber-900/30 border border-amber-700 text-amber-400">{pack.price || 0} pts</span>
+                    )}
+                  </div>
+                  <div className="mt-4 text-sm text-gray-400">Includes {(pack.exam_ids || []).length} exams</div>
+                  <div className="mt-5 flex gap-3">
+                    <button onClick={() => buyItem(pack, 'pack')} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm">
+                      {pack.purchased ? 'View Access' : 'Unlock Pack'}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Exam Cards */}
@@ -286,7 +412,7 @@ export default function Marketplace() {
           ) : exams.length === 0 ? (
             <div className="text-center py-20 text-gray-500">
               <FaBookOpen className="text-5xl mx-auto mb-4 opacity-30" />
-              <p>अभी कोई exam available नहीं है। जल्द आ रहा है!</p>
+              <p>No exams available yet. Coming soon!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -345,12 +471,12 @@ export default function Marketplace() {
                   <div className="px-6 pb-5 flex gap-3">
                     <button onClick={() => openExam(exam)}
                       className="flex-1 py-2.5 rounded-xl border border-gray-700 hover:border-indigo-600 text-sm font-medium text-gray-300 hover:text-indigo-300 transition">
-                      Questions देखें
+                      View Questions
                     </button>
                     {!exam.purchased ? (
-                      <button onClick={() => buyExam(exam)}
+                      <button onClick={() => buyItem(exam, 'exam')}
                         className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition">
-                        <FaShoppingCart className="text-xs" /> Unlock करें
+                        <FaShoppingCart className="text-xs" /> Unlock
                       </button>
                     ) : (
                       <button onClick={() => openExam(exam)}
@@ -374,9 +500,9 @@ export default function Marketplace() {
             <motion.div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full"
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
               <h3 className="text-xl font-bold mb-2">🛒 Confirm Purchase</h3>
-              <p className="text-gray-400 text-sm mb-4">{buyModal.name} का Question Bank unlock करें।</p>
+              <p className="text-gray-400 text-sm mb-4">Unlock {buyModal.name} Question Bank.</p>
               <div className="bg-gray-800 rounded-xl p-4 mb-5 flex justify-between items-center">
-                <span className="text-gray-300">कीमत</span>
+                <span className="text-gray-300">Price</span>
                 <span className="text-amber-400 font-bold text-lg flex items-center gap-1">
                   <FaCoins /> {buyModal.price} Points
                 </span>

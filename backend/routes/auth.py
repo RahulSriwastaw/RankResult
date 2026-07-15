@@ -58,13 +58,13 @@ def register():
         name = (data.get('name') or '').strip()
 
         if not email or not password:
-            return jsonify({'error': 'Email और password ज़रूरी है'}), 400
+            return jsonify({'error': 'Email and password are required'}), 400
         if len(password) < 6:
-            return jsonify({'error': 'Password कम से कम 6 characters का होना चाहिए'}), 400
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
 
         existing = User.query.filter_by(email=email).first()
         if existing:
-            return jsonify({'error': 'यह email पहले से registered है'}), 409
+            return jsonify({'error': 'This email is already registered'}), 409
 
         user = User(email=email, password_hash=_hash_password(password), name=name or email.split('@')[0])
         db.session.add(user)
@@ -97,11 +97,11 @@ def login():
         password = data.get('password') or ''
 
         if not email or not password:
-            return jsonify({'error': 'Email और password ज़रूरी है'}), 400
+            return jsonify({'error': 'Email and password are required'}), 400
 
         user = User.query.filter_by(email=email).first()
         if not user or user.password_hash != _hash_password(password):
-            return jsonify({'error': 'Email या password गलत है'}), 401
+            return jsonify({'error': 'Invalid email or password'}), 401
 
         wallet = UserPoints.query.filter_by(user_id=user.id).first()
         token = _make_token(user.id, user.email)

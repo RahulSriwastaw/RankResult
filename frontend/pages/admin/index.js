@@ -96,6 +96,7 @@ export default function AdminLayout() {
             { id: 'dashboard', icon: FaTachometerAlt, label: 'डैशबोर्ड' },
             { id: 'users', icon: FaUsers, label: 'यूज़र्स' },
             { id: 'exams', icon: FaBook, label: 'परीक्षाएं' },
+            { id: 'packs', icon: FaBook, label: 'पैक्स' },
             { id: 'results', icon: FaClipboardList, label: 'रिजल्ट' },
             { id: 'questions', icon: FaQuestionCircle, label: 'प्रश्न' },
             { id: 'parsed', icon: FaClipboardList, label: 'पैरस्ड डेटा' },
@@ -136,6 +137,7 @@ export default function AdminLayout() {
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'users' && <Users />}
           {activeTab === 'exams' && <Exams />}
+          {activeTab === 'packs' && <Packs />}
           {activeTab === 'results' && <Results />}
           {activeTab === 'questions' && <Questions />}
           {activeTab === 'parsed' && <ParsedData />}
@@ -221,6 +223,198 @@ function Dashboard() {
             <p className="text-sm text-gray-400">नेट बैलेंस</p>
             <p className="text-2xl font-bold text-indigo-400">{(stats?.total_points_earned || 0) - (stats?.total_points_spent || 0)}</p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==================== QUESTION PACKS COMPONENT ====================
+function Packs() {
+  const [packs, setPacks] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({ name: '', description: '', price: '0', exam_ids: [] });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [packsRes, examsRes] = await Promise.all([
+        fetch('http://localhost:5000/api/admin/packs'),
+        fetch('http://localhost:5000/api/admin/exams'),
+      ]);
+      const packsData = await packsRes.json();
+      const examsData = await examsRes.json();
+      setPacks(Array.isArray(packsData.packs) ? packsData.packs : []);
+      setExams(Array.isArray(examsData.exams) ? examsData.exams : []);
+    } catch (e) {
+      console.error(e);
+      setError('Failed to load packs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleExam = (examId) => {
+    setForm(prev => ({
+      ...prev,
+      exam_ids: prev.exam_ids.includes(examId)
+        ? prev.exam_ids.filter(id => id !== examId)
+        : [...prev.exam_ids, examId],
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage('');
+    setError('');
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/packs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          price: Number(form.price || 0),
+          exam_ids: form.exam_ids,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage('✅ Pack created successfully');
+        setForm({ name: '', description: '', price: '0', exam_ids: [] });
+        fetchData();
+      } else {
+        setError(data.error || 'Failed to create pack');
+      }
+    } catch (e) {
+      setError('Network error while creating pack');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (packId) => {
+    if (!confirm('क्या आप इस पैक को हटाना चाहते हैं?')) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/packs/${packId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchData();
+      } else {
+        setError(data.error || 'Failed to delete pack');
+      }
+    } catch (e) {
+      setError('Failed to delete pack');
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">📦 Question Pack Management</h1>
+          <p className="text-gray-400 text-sm mt-1">Admin packs bundle multiple exams into one marketplace offer.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <form onSubmit={handleSubmit} className="xl:col-span-2 bg-gray-800 rounded-2xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Create New Pack</h2>
+          {message && <div className="rounded-lg bg-green-900/40 border border-green-700 px-3 py-2 text-sm text-green-300">{message}</div>}
+          {error && <div className="rounded-lg bg-red-900/40 border border-red-700 px-3 py-2 text-sm text-red-300">{error}</div>}
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Pack Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white"
+              placeholder="e.g. RRB NTPC Mega Pack"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white"
+              rows="3"
+              placeholder="Bundle details"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Pack Price (points)</label>
+            <input
+              type="number"
+              min="0"
+              value={form.price}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Select Exams</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-auto p-2 rounded-xl bg-gray-900/60">
+              {exams.map((exam) => (
+                <label key={exam.id} className="flex items-center gap-2 rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-300">
+                  <input
+                    type="checkbox"
+                    checked={form.exam_ids.includes(exam.id)}
+                    onChange={() => toggleExam(exam.id)}
+                  />
+                  <span>{exam.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold disabled:opacity-60"
+          >
+            {submitting ? 'Creating...' : 'Create Pack'}
+          </button>
+        </form>
+
+        <div className="bg-gray-800 rounded-2xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Existing Packs</h2>
+          {loading ? (
+            <div className="text-sm text-gray-400">Loading...</div>
+          ) : packs.length === 0 ? (
+            <div className="text-sm text-gray-400">No packs created yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {packs.map((pack) => (
+                <div key={pack.id} className="rounded-xl border border-gray-700 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-white">{pack.name}</h3>
+                      <p className="text-xs text-gray-400 mt-1">{pack.description || 'No description'}</p>
+                    </div>
+                    <button onClick={() => handleDelete(pack.id)} className="text-xs text-red-400">Delete</button>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-sm text-gray-400">
+                    <span>{(pack.exam_ids || []).length} exams</span>
+                    <span className="text-amber-400 font-medium">{pack.price || 0} pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -584,6 +778,7 @@ function Exams() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [newExam, setNewExam] = useState({ name: '', date: '', total_questions: 100 });
+  const [bulkSelected, setBulkSelected] = useState([]);
 
   useEffect(() => {
     fetchExams();
@@ -599,6 +794,26 @@ function Exams() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const runBulkDeleteExams = async () => {
+    if (bulkSelected.length === 0) return;
+    if (!confirm(`क्या आप वाकई ${bulkSelected.length} परीक्षाओं को डिलीट करना चाहते हैं? उनके संबंधित सभी रिजल्ट भी डिलीट हो जाएंगे।`)) return;
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/exams/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: bulkSelected }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ${data.deleted} Exams deleted`);
+        setBulkSelected([]);
+        fetchExams();
+      } else {
+        alert('❌ Error: ' + (data.error || ''));
+      }
+    } catch (e) { alert('❌ Delete failed'); }
   };
 
   const addExam = async (e) => {
@@ -631,12 +846,25 @@ function Exams() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">📚 परीक्षाएं</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
-        >
-          + नई परीक्षा
-        </button>
+        <div className="flex items-center gap-3">
+          {bulkSelected.length > 0 && (
+            <>
+              <span className="text-sm text-indigo-400">{bulkSelected.length} selected</span>
+              <button onClick={runBulkDeleteExams} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm transition">
+                🗑️ Bulk Delete
+              </button>
+              <button onClick={() => setBulkSelected([])} className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm transition">
+                Clear
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm"
+          >
+            + नई परीक्षा
+          </button>
+        </div>
       </div>
 
       {showAdd && (
@@ -644,7 +872,7 @@ function Exams() {
           <h3 className="font-semibold mb-4">नई परीक्षा जोड़ें</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">परीक्षा का नाम</label>
+              <label className="block text-sm text-gray-400 mb-1"> परीक्षा का नाम</label>
               <input
                 type="text"
                 value={newExam.name}
@@ -687,6 +915,16 @@ function Exams() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-700">
+              <th className="p-3 text-left w-12">
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) setBulkSelected(exams.map(ex => ex.id));
+                    else setBulkSelected([]);
+                  }}
+                  checked={exams.length > 0 && bulkSelected.length === exams.length}
+                />
+              </th>
               <th className="p-3 text-left">ID</th>
               <th className="p-3 text-left">नाम</th>
               <th className="p-3 text-left">तारीख</th>
@@ -698,6 +936,15 @@ function Exams() {
           <tbody>
             {exams.map((e) => (
               <tr key={e.id} className="border-t border-gray-700 hover:bg-gray-750">
+                <td className="p-3">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelected.includes(e.id)}
+                    onChange={() => {
+                      setBulkSelected(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id]);
+                    }}
+                  />
+                </td>
                 <td className="p-3">{e.id}</td>
                 <td className="p-3 font-medium">{e.name}</td>
                 <td className="p-3 text-gray-400">{e.date ? new Date(e.date).toLocaleDateString() : '—'}</td>
@@ -725,6 +972,7 @@ function Results() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedResult, setSelectedResult] = useState(null);
+  const [bulkSelected, setBulkSelected] = useState([]);
 
   useEffect(() => {
     fetchResults();
@@ -742,6 +990,30 @@ function Results() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const runBulkDeleteResults = async () => {
+    if (bulkSelected.length === 0) return;
+    if (!confirm(`क्या आप वाकई ${bulkSelected.length} रिजल्ट्स को डिलीट करना चाहते हैं?`)) return;
+    try {
+      const res = await fetch('http://localhost:5000/api/admin/results/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: bulkSelected }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ${data.deleted} Results deleted`);
+        setBulkSelected([]);
+        if (page === 1) {
+          fetchResults();
+        } else {
+          setPage(1);
+        }
+      } else {
+        alert('❌ Error: ' + (data.error || ''));
+      }
+    } catch (e) { alert('❌ Delete failed'); }
   };
 
   const fetchResultDetail = async (id) => {
@@ -767,10 +1039,33 @@ function Results() {
   if (selectedResult) {
     const r = selectedResult.result;
     const qs = selectedResult.questions || [];
+
+    // Helper for Section-wise
+    const buildSections = (result, questions) => {
+      const sw = result?.section_wise;
+      if (Array.isArray(sw) && sw.length > 0) return sw;
+      if (sw && typeof sw === 'object' && !Array.isArray(sw) && Object.keys(sw).length > 0) {
+        return Object.entries(sw).map(([name, marks]) => ({ name, marks, total: null, na: null, right: null, wrong: null }));
+      }
+      if (!questions?.length) return [];
+      const groups = {};
+      questions.forEach(q => {
+        const sn = q.parsed_payload?.section_name || 'Overall';
+        if (!groups[sn]) groups[sn] = { name: sn, total: 0, na: 0, right: 0, wrong: 0, marks: 0 };
+        groups[sn].total++;
+        if (q.student_answer && q.student_answer === q.correct_answer) { groups[sn].right++; groups[sn].marks = +(groups[sn].marks + 1).toFixed(2); }
+        else if (q.student_answer && q.student_answer !== q.correct_answer) { groups[sn].wrong++; groups[sn].marks = +(groups[sn].marks - 1/3).toFixed(2); }
+        else groups[sn].na++;
+      });
+      return Object.values(groups);
+    };
+
+    const sections = buildSections(r, qs);
+
     return (
       <div>
         <button onClick={() => setSelectedResult(null)} className="text-indigo-400 hover:text-indigo-300 mb-4 flex items-center gap-2">
-          ← वापस
+          ← Back
         </button>
 
         {/* Candidate Info */}
@@ -847,31 +1142,97 @@ function Results() {
             <p className="text-2xl font-bold text-red-400">{selectedResult.stats?.wrong || r.total_wrong}</p>
           </div>
           <div className="bg-gray-600/20 rounded-xl p-4 text-center">
-            <p className="text-sm text-gray-400">नहीं किया</p>
+            <p className="text-sm text-gray-400">Unattempted</p>
             <p className="text-2xl font-bold text-gray-400">{selectedResult.stats?.unattempted || r.total_unattempted}</p>
           </div>
         </div>
 
+        {/* Section-wise Score Summary */}
+        {sections.length > 0 && (
+          <div className="bg-gray-800 rounded-xl p-6 mb-6">
+            <h3 className="font-bold mb-4">📊 Section-wise Score Summary</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-gray-700/50">
+                  <tr>
+                    <th className="p-3">Section Name</th>
+                    <th className="p-3 text-center">Total</th>
+                    <th className="p-3 text-center">Unattempted</th>
+                    <th className="p-3 text-center">Right</th>
+                    <th className="p-3 text-center">Wrong</th>
+                    <th className="p-3 text-center">Marks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sections.map((sec, i) => (
+                    <tr key={i} className="border-t border-gray-700/50">
+                      <td className="p-3 text-gray-300">{sec.name}</td>
+                      <td className="p-3 text-center text-gray-400">{sec.total ?? '—'}</td>
+                      <td className="p-3 text-center text-gray-500">{sec.na ?? '—'}</td>
+                      <td className="p-3 text-center text-green-400 font-bold">{sec.right ?? '—'}</td>
+                      <td className="p-3 text-center text-red-400 font-bold">{sec.wrong ?? '—'}</td>
+                      <td className="p-3 text-center text-indigo-400 font-bold">{sec.marks != null ? Number(sec.marks).toFixed(2) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="font-bold mb-4">प्रश्न ({qs.length})</h3>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {qs.map((q) => {
-              const status = q.student_answer === q.correct_answer ? 'correct' : q.student_answer ? 'wrong' : 'unattempted';
-              const statusColor = status === 'correct' ? 'bg-green-600/20 border-green-600' : status === 'wrong' ? 'bg-red-600/20 border-red-600' : 'bg-gray-600/20 border-gray-600';
+          <h3 className="font-bold mb-4">Questions ({qs.length})</h3>
+          <div className="space-y-4 max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-700">
+            {Array.from(new Set(qs.map(q => q.parsed_payload?.section_name || 'Overall'))).map((sectionName) => {
+              const sectionQs = qs.filter(q => (q.parsed_payload?.section_name || 'Overall') === sectionName);
+              if (sectionQs.length === 0) return null;
               return (
-                <div key={q.id} className={`${statusColor} border rounded-lg p-3 text-sm`}>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Q{q.question_no}</span>
-                    <span className={`font-medium ${status === 'correct' ? 'text-green-400' : status === 'wrong' ? 'text-red-400' : 'text-gray-400'}`}>
-                      {status === 'correct' ? '✅' : status === 'wrong' ? '❌' : '⏳'} {q.marks_awarded} marks
-                    </span>
+                <div key={sectionName} className="space-y-2">
+                  <h4 className="text-indigo-300 font-semibold text-sm bg-gray-700/30 p-2 rounded-lg">{sectionName}</h4>
+                  <div className="space-y-2">
+                    {sectionQs.map((q) => {
+                      const status = q.student_answer === q.correct_answer ? 'correct' : q.student_answer ? 'wrong' : 'unattempted';
+                      const statusColor = status === 'correct' ? 'bg-green-600/20 border-green-600' : status === 'wrong' ? 'bg-red-600/20 border-red-600' : 'bg-gray-600/20 border-gray-600';
+                      return (
+                        <div key={q.id} className={`${statusColor} border rounded-lg p-3 text-sm`}>
+                          <div className="flex justify-between">
+                            <span className="font-medium">Q{q.question_no}</span>
+                            <span className={`font-medium ${status === 'correct' ? 'text-green-400' : status === 'wrong' ? 'text-red-400' : 'text-gray-400'}`}>
+                              {status === 'correct' ? '✅' : status === 'wrong' ? '❌' : '⏳'} {q.marks_awarded} marks
+                            </span>
+                          </div>
+                          <p className="text-gray-300 mt-2 font-medium" dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></p>
+                          
+                          {/* Render Options */}
+                          <div className="space-y-1 mt-2">
+                            {['a', 'b', 'c', 'd'].map(opt => {
+                              const optText = q.parsed_payload?.[`option_${opt}_text`];
+                              if (!optText) return null;
+                              const isOptCorrect = q.parsed_payload?.correct_option_text === optText;
+                              const isOptSelected = q.student_option_text === optText;
+                              let optStyle = 'text-gray-400';
+                              if (isOptCorrect) optStyle = 'text-green-400 font-bold';
+                              else if (isOptSelected) optStyle = 'text-red-400';
+                              
+                              return (
+                                <div key={opt} className={`flex gap-2 ${optStyle}`}>
+                                  <span className="uppercase">{opt}.</span>
+                                  <span dangerouslySetInnerHTML={{ __html: optText }}></span>
+                                  {isOptSelected && <span className="text-xs opacity-70 ml-1">(Chosen)</span>}
+                                  {isOptCorrect && <span className="text-xs opacity-70 ml-1">(Correct)</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <div className="mt-3 pt-2 border-t border-gray-600/50 flex flex-wrap gap-3 text-xs text-gray-500">
+                            {q.question_id_html && <span>Q ID: {q.question_id_html}</span>}
+                            {q.option_id && <span>Chosen Opt ID: {q.option_id}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="text-gray-300 mt-1">{q.question_text || ''}</p>
-                  <p className="text-gray-400 mt-1">
-                    {q.student_answer ? `आपका: ${q.student_answer}${q.student_option_text ? ' - ' + q.student_option_text : ''}` : 'नहीं किया'}
-                  </p>
-                  <p className="text-green-400">सही: {q.correct_answer}{q.correct_option_text ? ' - ' + q.correct_option_text : ''}</p>
-                  {q.question_id_html && <p className="text-gray-600 text-xs mt-1">ID: {q.question_id_html}</p>}
                 </div>
               );
             })}
@@ -883,14 +1244,27 @@ function Results() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">📋 रिजल्ट मैनेजमेंट</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">📋 Results Management</h1>
+        {bulkSelected.length > 0 && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-indigo-400">{bulkSelected.length} selected</span>
+            <button onClick={runBulkDeleteResults} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm transition">
+              🗑️ Bulk Delete
+            </button>
+            <button onClick={() => setBulkSelected([])} className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm transition">
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="mb-6">
         <input
           type="text"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="रोल नंबर से खोजें..."
+          placeholder="Search by roll number..."
           className="w-full px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500"
         />
       </div>
@@ -899,20 +1273,39 @@ function Results() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-700">
+              <th className="p-3 text-left w-12">
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) setBulkSelected(results.map(r => r.id));
+                    else setBulkSelected([]);
+                  }}
+                  checked={results.length > 0 && bulkSelected.length === results.length}
+                />
+              </th>
               <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">रोल नं.</th>
+              <th className="p-3 text-left">Roll No.</th>
               <th className="p-3 text-left">Score</th>
               <th className="p-3 text-left">Rank</th>
               <th className="p-3 text-left">Percentile</th>
-              <th className="p-3 text-left">कैटेगरी</th>
-              <th className="p-3 text-left">प्रश्न</th>
-              <th className="p-3 text-left">तारीख</th>
-              <th className="p-3 text-left">एक्शन</th>
+              <th className="p-3 text-left">Category</th>
+              <th className="p-3 text-left">Questions</th>
+              <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
             {results.map((r) => (
               <tr key={r.id} className="border-t border-gray-700 hover:bg-gray-750">
+                <td className="p-3">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelected.includes(r.id)}
+                    onChange={() => {
+                      setBulkSelected(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id]);
+                    }}
+                  />
+                </td>
                 <td className="p-3">{r.id}</td>
                 <td className="p-3 font-mono text-xs">{r.roll_number}</td>
                 <td className="p-3">{r.score}</td>
@@ -923,10 +1316,10 @@ function Results() {
                 <td className="p-3 text-gray-400 text-xs">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="p-3">
                   <button onClick={() => fetchResultDetail(r.id)} className="text-indigo-400 hover:text-indigo-300 mr-2">
-                    देखें
+                    View
                   </button>
                   <button onClick={() => deleteResult(r.id)} className="text-red-400 hover:text-red-300">
-                    हटाएं
+                    Delete
                   </button>
                 </td>
               </tr>

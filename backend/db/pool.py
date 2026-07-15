@@ -16,6 +16,20 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        # Seed default exam if empty
+        from .models import Exam
+        if Exam.query.count() == 0:
+            from datetime import date
+            default_exam = Exam(
+                id=1,
+                name="RRB NTPC CBT 1",
+                date=date.today(),
+                total_questions=100,
+                price=0,
+                description="Default NTPC Exam"
+            )
+            db.session.add(default_exam)
+            db.session.commit()
         if db.engine.dialect.name == 'sqlite':
             from sqlalchemy import event
             from sqlalchemy.engine import Engine

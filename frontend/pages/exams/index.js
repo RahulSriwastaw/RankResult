@@ -17,6 +17,18 @@ const EXAMS = [
     border: 'border-red-700/30',
   },
   {
+    slug: 'ntpc-cbt2',
+    name: 'NTPC CBT-II',
+    year: '2025',
+    fullName: 'Railway NTPC Computer Based Test-II',
+    desc: '100 questions | 90 min | General Awareness, Mathematics, Reasoning. Check answer key, calculate score and predict rank.',
+    badge: 'Active',
+    badgeColor: 'bg-indigo-900/50 text-indigo-400 border-indigo-800',
+    icon: '🚉',
+    color: 'from-indigo-600/20 to-purple-600/20',
+    border: 'border-indigo-700/30',
+  },
+  {
     slug: 'ssc-cgl',
     name: 'SSC CGL',
     year: '2025',
@@ -138,7 +150,7 @@ export default function ExamsIndexPage() {
             Government Exam <span className="gradient-text">Answer Key</span> Calculators
           </h1>
           <p className="text-gray-400 mb-8 max-w-2xl">
-            RRB NTPC UG, SSC CGL, SSC CHSL, RRB ALP, Bank PO, SSC MTS — sabhi exams ke liye free answer key calculator. Exact score, live rank, percentile aur score card download.
+            RRB NTPC UG, SSC CGL, SSC CHSL, RRB ALP, Bank PO, SSC MTS — free answer key calculator for all exams. Exact score, live rank, percentile and score card download.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

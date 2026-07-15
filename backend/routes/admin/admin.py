@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
-from db.models import db, User, Exam, ExamResult, QuestionResponse, AISolution, UserPoints, PointsTransaction, MasterQuestion
+from db.models import db, User, Exam, ExamResult, QuestionResponse, AISolution, UserPoints, PointsTransaction, MasterQuestion, QuestionPack
 from sqlalchemy import func, desc, or_
 from datetime import datetime, timedelta, timezone
 from services.ai_service import ai_edit_question, bulk_ai_edit_questions
+from services.marketplace_service import create_question_pack
 import traceback
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
@@ -293,6 +294,102 @@ def delete_exam(exam_id):
         return jsonify({'error': str(e)}), 500
 
 
+@admin_bp.route('/exams/bulk-delete', methods=['POST'])
+def bulk_delete_exams():
+    """Bulk delete exams by IDs."""
+    try:
+        data = request.get_json() or {}
+        ids = data.get('ids', [])
+        if not ids:
+            return jsonify({'error': 'No exam IDs provided'}), 400
+
+        deleted_count = 0
+        for eid in ids:
+            try:
+                eid_int = int(eid)
+            except (ValueError, TypeError):
+                continue
+            exam = Exam.query.get(eid_int)
+            if exam:
+                db.session.delete(exam)
+                deleted_count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'deleted': deleted_count})
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+# ==================== QUESTION PACKS MANAGEMENT ====================
+
+@admin_bp.route('/packs', methods=['GET'])
+def list_packs():
+    try:
+        packs = QuestionPack.query.order_by(desc(QuestionPack.created_at)).all()
+        return jsonify({'packs': [p.to_dict() for p in packs]})
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/packs', methods=['POST'])
+def create_pack():
+    try:
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        description = (data.get('description') or '').strip()
+        price = int(data.get('price', 0) or 0)
+        exam_ids = data.get('exam_ids') or []
+
+        if not name:
+            return jsonify({'error': 'Pack name is required'}), 400
+
+        pack = create_question_pack(db.session, name, description, price, exam_ids)
+        return jsonify({'success': True, 'pack': pack.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/packs/<int:pack_id>', methods=['PUT'])
+def update_pack(pack_id):
+    try:
+        pack = QuestionPack.query.get_or_404(pack_id)
+        data = request.get_json() or {}
+        if 'name' in data:
+            pack.name = (data.get('name') or '').strip()
+        if 'description' in data:
+            pack.description = (data.get('description') or '').strip()
+        if 'price' in data:
+            pack.price = int(data.get('price', 0) or 0)
+        if 'exam_ids' in data:
+            pack.exam_ids = list(data.get('exam_ids') or [])
+        if 'is_active' in data:
+            pack.is_active = bool(data.get('is_active'))
+        db.session.commit()
+        return jsonify({'success': True, 'pack': pack.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/packs/<int:pack_id>', methods=['DELETE'])
+def delete_pack(pack_id):
+    try:
+        pack = QuestionPack.query.get_or_404(pack_id)
+        db.session.delete(pack)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
 # ==================== RESULTS MANAGEMENT ====================
 
 @admin_bp.route('/results', methods=['GET'])
@@ -427,6 +524,34 @@ def delete_result(result_id):
         db.session.delete(result)
         db.session.commit()
         return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/results/bulk-delete', methods=['POST'])
+def bulk_delete_results():
+    """Bulk delete exam results by IDs."""
+    try:
+        data = request.get_json() or {}
+        ids = data.get('ids', [])
+        if not ids:
+            return jsonify({'error': 'No result IDs provided'}), 400
+
+        deleted_count = 0
+        for rid in ids:
+            try:
+                rid_int = int(rid)
+            except (ValueError, TypeError):
+                continue
+            result = ExamResult.query.get(rid_int)
+            if result:
+                db.session.delete(result)
+                deleted_count += 1
+
+        db.session.commit()
+        return jsonify({'success': True, 'deleted': deleted_count})
     except Exception as e:
         db.session.rollback()
         print(traceback.format_exc())

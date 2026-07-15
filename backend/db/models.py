@@ -166,7 +166,9 @@ class QuestionResponse(db.Model):
         return self.master_question.question_id_html if self.master_question else None
 
     def to_dict(self):
-        sol = self.master_question.ai_solution if self.master_question else None
+        sols = self.master_question.ai_solutions if self.master_question else []
+        sols.sort(key=lambda s: s.likes, reverse=True) # Sort descending by likes
+        
         return {
             'id': self.id,
             'result_id': self.result_id,
@@ -182,7 +184,7 @@ class QuestionResponse(db.Model):
             'marks_awarded': float(self.marks_awarded) if self.marks_awarded is not None else 0,
             'difficulty': self.difficulty,
             'status': self.status,
-            'solution': sol.to_dict() if sol else None
+            'solutions': [s.to_dict() for s in sols]
         }
 
     def __repr__(self):
@@ -192,14 +194,17 @@ class QuestionResponse(db.Model):
 class AISolution(db.Model):
     __tablename__ = 'ai_solutions'
     id = db.Column(db.Integer, primary_key=True)
-    master_question_id = db.Column(db.Integer, db.ForeignKey('master_questions.id', ondelete='CASCADE'), nullable=False, unique=True)
+    master_question_id = db.Column(db.Integer, db.ForeignKey('master_questions.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True) # Who published it
     explanation = db.Column(db.Text, nullable=False)
     why_wrong = db.Column(db.Text)
     key_takeaways = db.Column(db.JSON)  # SQLite & PG compatible JSON list
     similar_questions_url = db.Column(db.Text)
+    likes = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=utcnow)
 
-    master_question = db.relationship('MasterQuestion', backref=db.backref('ai_solution', uselist=False, lazy=True, cascade='all, delete-orphan'))
+    master_question = db.relationship('MasterQuestion', backref=db.backref('ai_solutions', lazy=True, cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('published_solutions', lazy=True))
 
     def to_dict(self):
         return {
@@ -209,11 +214,28 @@ class AISolution(db.Model):
             'why_wrong': self.why_wrong,
             'key_takeaways': self.key_takeaways,
             'similar_questions_url': self.similar_questions_url,
+            'likes': self.likes,
+            'user_id': self.user_id,
+            'user_name': self.user.name if self.user else 'AI',
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
     def __repr__(self):
         return f'<AISolution for question {self.master_question_id}>'
+
+
+class UserUnlockedQuestion(db.Model):
+    __tablename__ = 'user_unlocked_questions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    master_question_id = db.Column(db.Integer, db.ForeignKey('master_questions.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=utcnow)
+    
+    # Ensure a user only unlocks a question once
+    __table_args__ = (db.UniqueConstraint('user_id', 'master_question_id', name='_user_question_uc'),)
+
+    def __repr__(self):
+        return f'<UserUnlockedQuestion user={self.user_id} q={self.master_question_id}>'
 
 
 class User(db.Model):
@@ -257,6 +279,28 @@ class PointsTransaction(db.Model):
 
     def __repr__(self):
         return f'<PointsTransaction {self.type} {self.amount} user={self.user_id}>'
+
+
+class QuestionPack(db.Model):
+    __tablename__ = 'question_packs'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    price = db.Column(db.Integer, default=0)
+    exam_ids = db.Column(db.JSON, default=list)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'price': self.price,
+            'exam_ids': self.exam_ids or [],
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class ExamPurchase(db.Model):
