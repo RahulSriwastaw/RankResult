@@ -72,6 +72,8 @@ def generate_solution_endpoint(result_id, q_id):
             return jsonify({'error': 'Insufficient points to generate.'}), 402
             
         deduct_points(user_id, 5, f'Generated new solution for question {q_id}')
+
+        mq = q.master_question
         
         sol_data = generate_solution(
             q.question_no,
@@ -79,8 +81,48 @@ def generate_solution_endpoint(result_id, q_id):
             q.student_answer,
             question_text=q.question_text,
             correct_option_text=q.correct_option_text,
-            student_option_text=q.student_option_text or q.student_answer
+            student_option_text=q.student_option_text or q.student_answer,
+            option_a=mq.option_a_text if mq else None,
+            option_b=mq.option_b_text if mq else None,
+            option_c=mq.option_c_text if mq else None,
+            option_d=mq.option_d_text if mq else None,
         )
+
+        # ── Persist AI-enriched metadata back to MasterQuestion ──────────────
+        if mq:
+            if sol_data.get('subject') and not mq.subject:
+                mq.subject = sol_data['subject']
+            if sol_data.get('chapter') and not mq.chapter:
+                mq.chapter = sol_data['chapter']
+            if sol_data.get('question_type') and not mq.question_type:
+                mq.question_type = sol_data['question_type']
+            if sol_data.get('difficulty') and not mq.difficulty:
+                mq.difficulty = sol_data['difficulty']
+            if sol_data.get('question_text_hin') and not mq.question_text_hin:
+                mq.question_text_hin = sol_data['question_text_hin']
+            if sol_data.get('question_text_eng') and not mq.question_text_eng:
+                mq.question_text_eng = sol_data['question_text_eng']
+            if sol_data.get('option_a_hin') and not mq.option_a_hin:
+                mq.option_a_hin = sol_data['option_a_hin']
+            if sol_data.get('option_a_eng') and not mq.option_a_eng:
+                mq.option_a_eng = sol_data['option_a_eng']
+            if sol_data.get('option_b_hin') and not mq.option_b_hin:
+                mq.option_b_hin = sol_data['option_b_hin']
+            if sol_data.get('option_b_eng') and not mq.option_b_eng:
+                mq.option_b_eng = sol_data['option_b_eng']
+            if sol_data.get('option_c_hin') and not mq.option_c_hin:
+                mq.option_c_hin = sol_data['option_c_hin']
+            if sol_data.get('option_c_eng') and not mq.option_c_eng:
+                mq.option_c_eng = sol_data['option_c_eng']
+            if sol_data.get('option_d_hin') and not mq.option_d_hin:
+                mq.option_d_hin = sol_data['option_d_hin']
+            if sol_data.get('option_d_eng') and not mq.option_d_eng:
+                mq.option_d_eng = sol_data['option_d_eng']
+            if sol_data.get('solution_hin') and not mq.solution_hin:
+                mq.solution_hin = sol_data['solution_hin']
+            if sol_data.get('solution_eng') and not mq.solution_eng:
+                mq.solution_eng = sol_data['solution_eng']
+            db.session.commit()
         
         # Return as temporary solution, not saved to DB
         return jsonify({
@@ -94,7 +136,14 @@ def generate_solution_endpoint(result_id, q_id):
                 'likes': 0,
                 'user_id': user_id,
                 'user_name': 'You (Temporary)',
-                'is_temporary': True
+                'is_temporary': True,
+                # New enriched metadata in response too
+                'subject': sol_data.get('subject'),
+                'chapter': sol_data.get('chapter'),
+                'question_type': sol_data.get('question_type'),
+                'difficulty': sol_data.get('difficulty'),
+                'solution_hin': sol_data.get('solution_hin'),
+                'solution_eng': sol_data.get('solution_eng'),
             },
             'newBalance': get_balance(user_id)
         })
@@ -103,6 +152,7 @@ def generate_solution_endpoint(result_id, q_id):
         db.session.rollback()
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
 
 
 @questions_bp.route('/<result_id>/questions/<q_id>/publish', methods=['POST'])

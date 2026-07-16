@@ -29,6 +29,12 @@ export default function Marketplace() {
   const { user, token } = useAuth();
   const [exams, setExams] = useState([]);
   const [packs, setPacks] = useState([]);
+
+  const maskMetric = (value, purchased) => {
+    if (purchased || value == null) return value;
+    const text = String(value);
+    return text.length <= 2 ? text : `${text.slice(0, 2)}**`;
+  };
   const [loading, setLoading] = useState(true);
   const [packsLoading, setPacksLoading] = useState(true);
   const [selectedExam, setSelectedExam] = useState(null);
@@ -46,10 +52,46 @@ export default function Marketplace() {
   const [filters, setFilters] = useState({ subject: '', shift_date: '', shift_time: '' });
   const [filterOptions, setFilterOptions] = useState({ subjects: [], dates: [], times: [] });
   const [selectedIds, setSelectedIds] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [pointsPacks, setPointsPacks] = useState([]);
+  const [pointsPacksLoading, setPointsPacksLoading] = useState(true);
 
-  useEffect(() => { fetchExams(); fetchPacks(); }, [user]);
+  useEffect(() => {
+    fetchExams();
+    fetchPacks();
+    fetchPointsPacks();
+    fetchUserPoints();
+  }, [user]);
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const fetchUserPoints = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API}/api/user/${user.id}/points`);
+      const data = await res.json();
+      setCurrentUser(prev => prev ? { ...prev, balance: data.balance } : { ...user, balance: data.balance });
+      
+      const localUser = JSON.parse(localStorage.getItem('rv_user') || '{}');
+      localUser.balance = data.balance;
+      localStorage.setItem('rv_user', JSON.stringify(localUser));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchPointsPacks = async () => {
+    setPointsPacksLoading(true);
+    try {
+      const res = await fetch(`${API}/api/marketplace/points-packs`);
+      const data = await res.json();
+      setPointsPacks(Array.isArray(data.packs) ? data.packs : []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setPointsPacksLoading(false);
+    }
+  };
 
   const fetchExams = async () => {
     setLoading(true);
@@ -66,7 +108,10 @@ export default function Marketplace() {
     try {
       const res = await fetch(`${API}/api/marketplace/packs`, { headers: authHeaders });
       const data = await res.json();
-      setPacks(Array.isArray(data.packs) ? data.packs : []);
+      const uniquePacks = Array.isArray(data.packs)
+        ? data.packs.filter((pack, index, self) => self.findIndex(p => p.id === pack.id) === index)
+        : [];
+      setPacks(uniquePacks);
     } catch (e) { console.error(e); }
     finally { setPacksLoading(false); }
   };
@@ -168,7 +213,21 @@ export default function Marketplace() {
     setBuying(true);
     setBuyMsg('');
     try {
-      if (buyModal.kind === 'pack') {
+      if (buyModal.kind === 'pointspack') {
+        const res = await fetch(`${API}/api/marketplace/points-packs/purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ pack_id: buyModal.id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setBuyMsg('✅ ' + data.message);
+          fetchUserPoints();
+          setTimeout(() => setBuyModal(null), 1200);
+        } else {
+          setBuyMsg('❌ ' + (data.error || 'Purchase failed'));
+        }
+      } else if (buyModal.kind === 'pack') {
         // Razorpay flow for B2B packs
         const resOrder = await fetch(`${API}/api/marketplace/packs/${buyModal.id}/razorpay/order`, {
           method: 'POST',
@@ -272,10 +331,7 @@ export default function Marketplace() {
         const data = await res.json();
         if (data.success) {
           setBuyMsg('✅ ' + data.message);
-          // Update local user balance
-          const u = JSON.parse(localStorage.getItem('rv_user') || '{}');
-          u.balance = data.new_balance;
-          localStorage.setItem('rv_user', JSON.stringify(u));
+          fetchUserPoints();
           fetchExams();
           fetchPacks();
           setTimeout(() => {
@@ -528,7 +584,7 @@ export default function Marketplace() {
       </Head>
 
       <div className="min-h-screen bg-gray-950 text-white">
-        <NavBar user={user} />
+        <NavBar user={currentUser} />
 
         {/* Hero */}
         <div className="relative overflow-hidden">
@@ -550,6 +606,49 @@ export default function Marketplace() {
               </p>
             </motion.div>
           </div>
+        </div>
+
+        {/* Points Packs Section */}
+        <div className="max-w-5xl mx-auto px-4 pb-8">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">💎 Buy Points Packs</h2>
+              <p className="text-gray-400 text-sm">Purchase points to unlock detailed AI explanations</p>
+            </div>
+            {currentUser && (
+              <span className="text-sm bg-yellow-950/40 border border-yellow-700/50 text-yellow-400 px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+                <FaCoins /> {currentUser.balance || 0} Points
+              </span>
+            )}
+          </div>
+          {pointsPacksLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+            </div>
+          ) : pointsPacks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl">
+              <p>No points packs configured yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+              {pointsPacks.map((pack) => (
+                <motion.div key={pack.id} whileHover={{ y: -3 }} className="bg-gray-900 border border-gray-800 hover:border-yellow-600/30 rounded-2xl p-5 flex flex-col justify-between transition duration-200">
+                  <div>
+                    <h3 className="text-sm font-bold text-white mb-1.5">{pack.name}</h3>
+                    <div className="flex items-baseline gap-1.5 my-3">
+                      <span className="text-3xl font-black text-yellow-400">{pack.points}</span>
+                      <span className="text-xs text-gray-500 font-medium">Points</span>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <button onClick={() => buyItem(pack, 'pointspack')} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-gray-950 font-extrabold text-sm shadow-lg shadow-amber-500/10 active:scale-[0.98] transition-all">
+                      Buy for ₹{pack.price}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Pack Cards */}
@@ -582,15 +681,29 @@ export default function Marketplace() {
                     )}
                   </div>
                   <div className="mt-4 text-sm text-gray-400">Includes {(pack.exam_ids || []).length} exams</div>
-                  <div className="mt-5 flex gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-sm text-gray-200">
+                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
+                      <div className="text-[10px] text-gray-400">Students</div>
+                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.student_count, pack.purchased)}</div>
+                    </div>
+                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
+                      <div className="text-[10px] text-gray-400">Questions</div>
+                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.question_count, pack.purchased)}</div>
+                    </div>
+                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
+                      <div className="text-[10px] text-gray-400">Sets</div>
+                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.set_count, pack.purchased)}</div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex flex-col sm:flex-row gap-3">
                     {pack.purchased ? (
                       <Link href={`/marketplace/packs/${pack.id}/analysis`} className="w-full">
-                        <button className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm">
+                        <button className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm">
                           View Access & Marks Analysis
                         </button>
                       </Link>
                     ) : (
-                      <button onClick={() => buyItem(pack, 'pack')} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm">
+                      <button onClick={() => buyItem(pack, 'pack')} className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm">
                         Unlock Pack — ₹{pack.price || 0}
                       </button>
                     )}
@@ -602,92 +715,99 @@ export default function Marketplace() {
         </div>
 
         {/* Exam Cards */}
-        <div className="max-w-5xl mx-auto px-4 pb-16">
-          {loading ? (
-            <div className="flex justify-center py-20">
-              <div className="animate-spin w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full" />
-            </div>
-          ) : exams.length === 0 ? (
-            <div className="text-center py-20 text-gray-500">
-              <FaBookOpen className="text-5xl mx-auto mb-4 opacity-30" />
-              <p>No exams available yet. Coming soon!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {exams.map((exam, i) => (
-                <motion.div key={exam.id}
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-indigo-700 transition group">
-                  {/* Card Header */}
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-bold group-hover:text-indigo-300 transition">{exam.name}</h2>
-                        <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
-                          <span className="flex items-center gap-1"><FaCalendar className="text-xs" /> {exam.date}</span>
-                          <span>·</span>
-                          <span>{exam.shifts || 1} Shifts</span>
+        {packs.length === 0 && (
+          <div className="max-w-5xl mx-auto px-4 pb-16">
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full" />
+              </div>
+            ) : exams.length === 0 ? (
+              <div className="text-center py-20 text-gray-500">
+                <FaBookOpen className="text-5xl mx-auto mb-4 opacity-30" />
+                <p>No exams available yet. Coming soon!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {exams.map((exam, i) => (
+                  <motion.div
+                    key={exam.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-indigo-700 transition group"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h2 className="text-lg font-bold group-hover:text-indigo-300 transition">{exam.name}</h2>
+                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
+                            <span className="flex items-center gap-1"><FaCalendar className="text-xs" /> {exam.date}</span>
+                            <span>·</span>
+                            <span>{exam.shifts || 1} Shifts</span>
+                          </div>
                         </div>
+                        {exam.purchased ? (
+                          <span className="flex items-center gap-1 bg-green-900/40 border border-green-700/50 text-green-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-medium">
+                            <FaUnlock className="text-xs" /> Purchased
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 bg-amber-900/30 border border-amber-700/40 text-amber-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-semibold">
+                            <FaCoins className="text-xs" /> {exam.price} pts
+                          </span>
+                        )}
                       </div>
-                      {exam.purchased ? (
-                        <span className="flex items-center gap-1 bg-green-900/40 border border-green-700/50 text-green-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-medium">
-                          <FaUnlock className="text-xs" /> Purchased
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 bg-amber-900/30 border border-amber-700/40 text-amber-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-semibold">
-                          <FaCoins className="text-xs" /> {exam.price} pts
-                        </span>
+
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { label: 'Questions', value: exam.total_questions || '—' },
+                          { label: 'Subjects', value: exam.subjects?.length || '—' },
+                          { label: 'Shifts', value: exam.shifts || 1 },
+                        ].map(s => (
+                          <div key={s.label} className="bg-gray-800/60 rounded-xl px-3 py-2 text-center">
+                            <div className="text-lg font-bold text-white">{s.value}</div>
+                            <div className="text-xs text-gray-500">{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {exam.subjects && exam.subjects.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {exam.subjects.slice(0, 4).map(s => (
+                            <span key={s} className="text-xs bg-indigo-900/30 text-indigo-400 border border-indigo-800/50 px-2 py-0.5 rounded-full">{s}</span>
+                          ))}
+                        </div>
                       )}
                     </div>
 
-                    {/* Stats */}
-                    <div className="mt-4 grid grid-cols-3 gap-3">
-                      {[
-                        { label: 'Questions', value: exam.total_questions || '—' },
-                        { label: 'Subjects', value: exam.subjects?.length || '—' },
-                        { label: 'Shifts', value: exam.shifts || 1 },
-                      ].map(s => (
-                        <div key={s.label} className="bg-gray-800/60 rounded-xl px-3 py-2 text-center">
-                          <div className="text-lg font-bold text-white">{s.value}</div>
-                          <div className="text-xs text-gray-500">{s.label}</div>
-                        </div>
-                      ))}
+                    <div className="px-6 pb-5 flex gap-3">
+                      <button
+                        onClick={() => openExam(exam)}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-700 hover:border-indigo-600 text-sm font-medium text-gray-300 hover:text-indigo-300 transition"
+                      >
+                        View Questions
+                      </button>
+                      {!exam.purchased ? (
+                        <button
+                          onClick={() => buyItem(exam, 'exam')}
+                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition"
+                        >
+                          <FaShoppingCart className="text-xs" /> Unlock
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openExam(exam)}
+                          className="flex-1 py-2.5 rounded-xl bg-green-800/40 border border-green-700 text-green-400 font-semibold text-sm flex items-center justify-center gap-2"
+                        >
+                          <FaUnlock className="text-xs" /> Full Access
+                        </button>
+                      )}
                     </div>
-
-                    {/* Subjects */}
-                    {exam.subjects && exam.subjects.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {exam.subjects.slice(0, 4).map(s => (
-                          <span key={s} className="text-xs bg-indigo-900/30 text-indigo-400 border border-indigo-800/50 px-2 py-0.5 rounded-full">{s}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Footer */}
-                  <div className="px-6 pb-5 flex gap-3">
-                    <button onClick={() => openExam(exam)}
-                      className="flex-1 py-2.5 rounded-xl border border-gray-700 hover:border-indigo-600 text-sm font-medium text-gray-300 hover:text-indigo-300 transition">
-                      View Questions
-                    </button>
-                    {!exam.purchased ? (
-                      <button onClick={() => buyItem(exam, 'exam')}
-                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition">
-                        <FaShoppingCart className="text-xs" /> Unlock
-                      </button>
-                    ) : (
-                      <button onClick={() => openExam(exam)}
-                        className="flex-1 py-2.5 rounded-xl bg-green-800/40 border border-green-700 text-green-400 font-semibold text-sm flex items-center justify-center gap-2">
-                        <FaUnlock className="text-xs" /> Full Access
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Buy Modal */}
@@ -698,11 +818,11 @@ export default function Marketplace() {
             <motion.div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full"
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
               <h3 className="text-xl font-bold mb-2">🛒 Confirm Purchase</h3>
-              <p className="text-gray-400 text-sm mb-4">Unlock {buyModal.name} Question Bank.</p>
+              <p className="text-gray-400 text-sm mb-4">Unlock {buyModal.name} {buyModal.kind === 'pointspack' ? 'Points Bundle' : 'Question Bank'}.</p>
               <div className="bg-gray-800 rounded-xl p-4 mb-5 flex justify-between items-center">
                 <span className="text-gray-300">Price</span>
                 <span className="text-amber-400 font-bold text-lg flex items-center gap-1">
-                  <FaCoins /> {buyModal.price} Points
+                  {buyModal.kind === 'pointspack' ? `₹${buyModal.price}` : <><FaCoins /> {buyModal.price} Points</>}
                 </span>
               </div>
               {buyMsg && (

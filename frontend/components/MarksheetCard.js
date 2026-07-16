@@ -66,45 +66,45 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
       {/* ── TOP HEADER ──────────────────────────────────────────────────── */}
       <div style={{
         background: headerGrad,
-        padding: '20px 28px',
+        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '12px',
-        borderBottom: `1px solid rgba(99,102,241,0.25)`,
+        gap: '8px',
+        borderBottom: `1px solid rgba(99,102,241,0.18)`,
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <div style={{
-            width: '46px', height: '46px', borderRadius: '12px',
+            width: '36px', height: '36px', borderRadius: '10px',
             background: 'linear-gradient(135deg, #6366f1, #a855f7)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '20px', fontWeight: '900', color: '#fff',
-            boxShadow: '0 4px 15px rgba(99,102,241,0.5)',
+            fontSize: '16px', fontWeight: '900', color: '#fff',
+            boxShadow: '0 3px 10px rgba(99,102,241,0.35)',
           }}>⚡</div>
           <div>
             <div style={{
-              fontSize: '20px', fontWeight: '800', color: '#fff', letterSpacing: '-0.3px',
+              fontSize: '15px', fontWeight: '800', color: '#fff', letterSpacing: '-0.3px',
               background: 'linear-gradient(90deg, #a5b4fc, #c4b5fd, #f9a8d4)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
               RankVeda
             </div>
-            <div style={{ fontSize: '10px', color: 'rgba(165,180,252,0.7)', marginTop: '1px', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: '8px', color: 'rgba(165,180,252,0.7)', marginTop: '1px', letterSpacing: '0.4px' }}>
               OFFICIAL SCORE CARD
             </div>
           </div>
         </div>
 
         {/* Exam Name Centre */}
-        <div style={{ flex: 1, textAlign: 'center', padding: '0 20px' }}>
+        <div style={{ flex: 1, textAlign: 'center', padding: '0 10px' }}>
           <div style={{
-            fontSize: '14px', fontWeight: '700', color: '#e2e8f0', lineHeight: 1.4,
+            fontSize: '12px', fontWeight: '700', color: '#e2e8f0', lineHeight: 1.2,
           }}>
             {candidate?.exam_name || 'Railway Recruitment Board'}
           </div>
           {candidate?.subject && (
-            <div style={{ fontSize: '11px', color: 'rgba(165,180,252,0.65)', marginTop: '3px' }}>
+            <div style={{ fontSize: '9px', color: 'rgba(165,180,252,0.62)', marginTop: '2px' }}>
               {candidate.subject}
             </div>
           )}
@@ -113,12 +113,12 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
         {/* Date right */}
         <div style={{
           textAlign: 'right', flexShrink: 0,
-          background: 'rgba(99,102,241,0.15)',
-          border: '1px solid rgba(99,102,241,0.3)',
-          borderRadius: '10px', padding: '8px 14px',
+          background: 'rgba(99,102,241,0.12)',
+          border: '1px solid rgba(99,102,241,0.22)',
+          borderRadius: '8px', padding: '6px 10px',
         }}>
-          <div style={{ fontSize: '9px', color: 'rgba(165,180,252,0.6)', letterSpacing: '1px', textTransform: 'uppercase' }}>Generated</div>
-          <div style={{ fontSize: '13px', fontWeight: '700', color: '#a5b4fc', marginTop: '2px' }}>
+          <div style={{ fontSize: '8px', color: 'rgba(165,180,252,0.58)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Generated</div>
+          <div style={{ fontSize: '11px', fontWeight: '700', color: '#a5b4fc', marginTop: '2px' }}>
             {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
           </div>
         </div>
@@ -132,7 +132,7 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
       }}>
         {/* Info table */}
         <div style={{ flex: 1 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
             <tbody>
               {[
                 ['Candidate Name', candidate?.name],
@@ -145,21 +145,21 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
               ].map(([label, value], i) => (
                 <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : BG_ROW_ALT }}>
                   <td style={{
-                    padding: '9px 16px',
+                    padding: '6px 10px',
                     fontWeight: '600',
                     color: TEXT_DIM,
                     borderBottom: `1px solid ${BORDER}`,
-                    width: '195px',
+                    width: '120px',
                     borderRight: `1px solid ${BORDER}`,
-                    fontSize: '11px',
+                    fontSize: '10px',
                     letterSpacing: '0.2px',
                   }}>{label}</td>
                   <td style={{
-                    padding: '9px 16px',
+                    padding: '6px 10px',
                     color: TEXT_MAIN,
                     borderBottom: `1px solid ${BORDER}`,
                     fontFamily: i >= 1 && i <= 2 ? 'monospace' : 'inherit',
-                    fontSize: '12.5px',
+                    fontSize: '11px',
                     fontWeight: i === 0 ? '700' : '500',
                   }}>{value || '—'}</td>
                 </tr>
@@ -174,19 +174,19 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
           <thead>
             <tr style={{
-              background: 'linear-gradient(90deg, rgba(99,102,241,0.25) 0%, rgba(168,85,247,0.20) 100%)',
-              borderBottom: `1px solid rgba(99,102,241,0.4)`,
+              background: 'linear-gradient(90deg, rgba(99,102,241,0.20) 0%, rgba(168,85,247,0.16) 100%)',
+              borderBottom: `1px solid rgba(99,102,241,0.28)`,
             }}>
-              {['Section', 'Total Qs', 'Not Attempted', 'Right ✓', 'Wrong ✗', 'Marks Scored'].map((h, i) => (
+              {['Section', 'Total', 'NA', 'Right', 'Wrong', 'Marks'].map((h, i) => (
                 <th key={i} style={{
-                  padding: '11px 14px',
+                  padding: '6px 8px',
                   color: '#a5b4fc',
                   fontWeight: '700',
                   textAlign: i === 0 ? 'left' : 'center',
-                  fontSize: '11px',
-                  letterSpacing: '0.5px',
+                  fontSize: '9px',
+                  letterSpacing: '0.4px',
                   textTransform: 'uppercase',
-                  borderRight: i < 5 ? `1px solid rgba(99,102,241,0.2)` : 'none',
+                  borderRight: i < 5 ? `1px solid rgba(99,102,241,0.16)` : 'none',
                 }}>{h}</th>
               ))}
             </tr>
@@ -194,48 +194,48 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
           <tbody>
             {sections.length > 0 ? sections.map((sec, i) => (
               <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : BG_ROW_ALT }}>
-                <td style={{ padding: '9px 14px', fontWeight: '600', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MAIN }}>
+                <td style={{ padding: '6px 8px', fontWeight: '600', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MAIN, fontSize: '11px' }}>
                   {sec.name || `Section ${i + 1}`}
                 </td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MUTED, fontWeight: '600' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MUTED, fontWeight: '600', fontSize: '11px' }}>
                   {sec.total ?? '—'}
                 </td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GRAY }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GRAY, fontSize: '11px' }}>
                   {sec.na ?? '—'}
                 </td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GREEN, fontWeight: '700' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GREEN, fontWeight: '700', fontSize: '11px' }}>
                   {sec.right ?? sec.correct ?? '—'}
                 </td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: RED, fontWeight: '700' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: RED, fontWeight: '700', fontSize: '11px' }}>
                   {sec.wrong ?? '—'}
                 </td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, fontWeight: '700', color: '#818cf8' }}>
+                <td style={{ padding: '6px 8px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, fontWeight: '700', color: '#818cf8', fontSize: '11px' }}>
                   {sec.marks != null ? Number(sec.marks).toFixed(2) : '—'}
                 </td>
               </tr>
             )) : (
               <tr style={{ background: BG_ROW_ALT }}>
-                <td style={{ padding: '9px 14px', fontWeight: '600', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MAIN }}>Overall</td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MUTED }}>{maxMarks}</td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GRAY }}>{unattempted}</td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GREEN, fontWeight: '700' }}>{correct}</td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: RED, fontWeight: '700' }}>{wrong}</td>
-                <td style={{ padding: '9px 14px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, fontWeight: '700', color: '#818cf8' }}>{totalMarks}</td>
+                <td style={{ padding: '7px 10px', fontWeight: '600', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MAIN, fontSize: '12px' }}>Overall</td>
+                <td style={{ padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: TEXT_MUTED, fontSize: '12px' }}>{maxMarks}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GRAY, fontSize: '12px' }}>{unattempted}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: GREEN, fontWeight: '700', fontSize: '12px' }}>{correct}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, color: RED, fontWeight: '700', fontSize: '12px' }}>{wrong}</td>
+                <td style={{ padding: '7px 10px', textAlign: 'center', borderBottom: `1px solid ${BORDER}`, fontWeight: '700', color: '#818cf8', fontSize: '12px' }}>{totalMarks}</td>
               </tr>
             )}
 
             {/* Total Row */}
             <tr style={{
               background: 'linear-gradient(90deg, rgba(234,179,8,0.12) 0%, rgba(234,179,8,0.06) 100%)',
-              borderTop: `1px solid rgba(234,179,8,0.3)`,
+              borderTop: `1px solid rgba(234,179,8,0.24)`,
               fontWeight: '800',
             }}>
-              <td style={{ padding: '10px 14px', borderRight: `1px solid rgba(234,179,8,0.2)`, color: YELLOW, letterSpacing: '0.5px', fontSize: '11px', textTransform: 'uppercase' }}>Total</td>
-              <td style={{ padding: '10px 14px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.2)`, color: YELLOW }}>{totalQs}</td>
-              <td style={{ padding: '10px 14px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.2)`, color: YELLOW }}>{totalNA}</td>
-              <td style={{ padding: '10px 14px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.2)`, color: '#4ade80', fontSize: '14px' }}>{totalRight}</td>
-              <td style={{ padding: '10px 14px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.2)`, color: '#f87171', fontSize: '14px' }}>{totalWrong}</td>
-              <td style={{ padding: '10px 14px', textAlign: 'center', color: '#818cf8', fontSize: '16px' }}>{totalMarks}</td>
+              <td style={{ padding: '6px 8px', borderRight: `1px solid rgba(234,179,8,0.16)`, color: YELLOW, letterSpacing: '0.5px', fontSize: '9px', textTransform: 'uppercase' }}>Total</td>
+              <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.16)`, color: YELLOW, fontSize: '11px' }}>{totalQs}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.16)`, color: YELLOW, fontSize: '11px' }}>{totalNA}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.16)`, color: '#4ade80', fontSize: '12px' }}>{totalRight}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: `1px solid rgba(234,179,8,0.16)`, color: '#f87171', fontSize: '12px' }}>{totalWrong}</td>
+              <td style={{ padding: '6px 8px', textAlign: 'center', color: '#818cf8', fontSize: '12px' }}>{totalMarks}</td>
             </tr>
           </tbody>
         </table>
@@ -296,28 +296,28 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
           },
         ].map((card, i) => (
           <div key={i} style={{
-            padding: '18px 14px',
+            padding: '10px 8px',
             textAlign: 'center',
             background: `linear-gradient(135deg, ${card.gradStart} 0%, ${card.gradEnd} 100%)`,
             borderRight: i < 3 ? `1px solid ${card.borderColor}` : 'none',
             position: 'relative',
           }}>
-            <div style={{ fontSize: '22px', marginBottom: '6px' }}>{card.icon}</div>
+            <div style={{ fontSize: '16px', marginBottom: '4px' }}>{card.icon}</div>
             <div style={{
-              fontSize: '9px', fontWeight: '800', color: card.labelColor,
-              letterSpacing: '2px', marginBottom: '5px', textTransform: 'uppercase',
+              fontSize: '8px', fontWeight: '800', color: card.labelColor,
+              letterSpacing: '1.6px', marginBottom: '3px', textTransform: 'uppercase',
             }}>
               {card.label}
             </div>
             <div style={{
-              fontSize: '28px', fontWeight: '900', color: card.valueColor,
-              lineHeight: 1, letterSpacing: '-1px',
-              textShadow: `0 0 20px ${card.valueColor}60`,
+              fontSize: '20px', fontWeight: '900', color: card.valueColor,
+              lineHeight: 1.05, letterSpacing: '-1px',
+              textShadow: `0 0 12px ${card.valueColor}40`,
             }}>
               {card.value}
             </div>
             <div style={{
-              fontSize: '10px', color: TEXT_DIM, marginTop: '5px', lineHeight: 1.3,
+              fontSize: '8.5px', color: TEXT_DIM, marginTop: '3px', lineHeight: 1.2,
             }}>
               {card.sub}
             </div>
@@ -328,36 +328,30 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <div style={{
         background: '#07071a',
-        padding: '12px 22px',
+        padding: '8px 12px',
         display: 'flex',
         alignItems: 'center',
-        gap: '20px',
-        fontSize: '11px',
+        gap: '10px',
+        fontSize: '9px',
         color: TEXT_DIM,
         borderTop: `1px solid ${BORDER}`,
         flexWrap: 'wrap',
       }}>
         <span style={{ fontWeight: '700', color: TEXT_MUTED }}>Marking Scheme:</span>
-        <span>
-          Correct: <strong style={{ color: GREEN }}>+1</strong>
-        </span>
-        <span>
-          Wrong: <strong style={{ color: RED }}>-1/3</strong>
-        </span>
-        <span>
-          Unattempted: <strong style={{ color: GRAY }}>0</strong>
-        </span>
+        <span>Correct: <strong style={{ color: GREEN }}>+1</strong></span>
+        <span>Wrong: <strong style={{ color: RED }}>-1/3</strong></span>
+        <span>Unattempted: <strong style={{ color: GRAY }}>0</strong></span>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px',
-            background: 'rgba(99,102,241,0.15)',
-            border: '1px solid rgba(99,102,241,0.3)',
-            borderRadius: '20px', padding: '3px 10px',
-            color: '#a5b4fc', fontSize: '10px', fontWeight: '700',
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: 'rgba(99,102,241,0.12)',
+            border: '1px solid rgba(99,102,241,0.22)',
+            borderRadius: '16px', padding: '2px 8px',
+            color: '#a5b4fc', fontSize: '9px', fontWeight: '700',
           }}>
             ⚡ RankVeda.in
           </span>
-          <span style={{ color: TEXT_DIM, fontSize: '10px' }}>Score may vary from official result</span>
+          <span style={{ color: TEXT_DIM, fontSize: '8.5px' }}>Score may vary</span>
         </span>
       </div>
 

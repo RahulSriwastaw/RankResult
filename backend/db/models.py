@@ -25,16 +25,34 @@ class MasterQuestion(db.Model):
     question_id_html = db.Column(db.String(100), unique=True, index=True, nullable=True)
     question_hash = db.Column(db.String(64), unique=True, index=True, nullable=False)
     question_text = db.Column(db.Text, nullable=False)
+    question_text_hin = db.Column(db.Text)          # Hindi translation of question
+    question_text_eng = db.Column(db.Text)          # Clean English version of question
+    subject = db.Column(db.String(100))             # e.g. Mathematics, English, Reasoning
+    chapter = db.Column(db.String(200))             # e.g. Percentage, Profit & Loss
+    question_type = db.Column(db.String(50))        # e.g. MCQ, Fill in the blank, True/False
+    difficulty = db.Column(db.String(20))           # Easy / Medium / Hard
     correct_answer = db.Column(db.String(10), nullable=False)
     correct_option_text = db.Column(db.Text)
+    # Options - text in original, Hindi, English
     option_a_text = db.Column(db.Text)
+    option_a_hin = db.Column(db.Text)
+    option_a_eng = db.Column(db.Text)
     option_b_text = db.Column(db.Text)
+    option_b_hin = db.Column(db.Text)
+    option_b_eng = db.Column(db.Text)
     option_c_text = db.Column(db.Text)
+    option_c_hin = db.Column(db.Text)
+    option_c_eng = db.Column(db.Text)
     option_d_text = db.Column(db.Text)
+    option_d_hin = db.Column(db.Text)
+    option_d_eng = db.Column(db.Text)
     option_a_id = db.Column(db.String(50))
     option_b_id = db.Column(db.String(50))
     option_c_id = db.Column(db.String(50))
     option_d_id = db.Column(db.String(50))
+    # AI-generated solutions in multiple languages
+    solution_hin = db.Column(db.Text)               # Hindi solution/explanation
+    solution_eng = db.Column(db.Text)               # English solution/explanation
     parsed_payload = db.Column(db.JSON, default=dict)
     reference_count = db.Column(db.Integer, default=1)
     shifts = db.Column(db.JSON, default=list)  # list of shifts: [{'exam_id': int, 'test_date': str, 'test_time': str, 'subject': str}]
@@ -61,6 +79,8 @@ class ExamResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     exam_id = db.Column(db.Integer, db.ForeignKey('exams.id', ondelete='CASCADE'))
+    
+    exam = db.relationship('Exam', backref=db.backref('results', lazy=True, cascade='all, delete-orphan'))
     
     # Candidate Info
     registration_number = db.Column(db.String(50))
@@ -169,16 +189,28 @@ class QuestionResponse(db.Model):
     def question_id_html(self):
         return self.master_question.question_id_html if self.master_question else None
 
-    def to_dict(self):
-        sols = self.master_question.ai_solutions if self.master_question else []
-        sols.sort(key=lambda s: s.likes, reverse=True) # Sort descending by likes
-        
+    def to_dict(self, unlocked_mq_ids=None):
+        mq = self.master_question
+        is_unlocked = False
+        if unlocked_mq_ids and mq and mq.id in unlocked_mq_ids:
+            is_unlocked = True
+
+        sols = []
+        if is_unlocked:
+            sols = mq.ai_solutions if mq else []
+            sols.sort(key=lambda s: s.likes, reverse=True) # Sort descending by likes
+
         return {
             'id': self.id,
             'result_id': self.result_id,
             'question_no': self.question_no,
             'question_text': self.question_text,
+            'question_text_hin': mq.question_text_hin if mq else None,
+            'question_text_eng': mq.question_text_eng if mq else None,
             'question_id_html': self.question_id_html,
+            'subject': mq.subject if mq else None,
+            'chapter': mq.chapter if mq else None,
+            'question_type': mq.question_type if mq else None,
             'option_id': self.option_id,
             'student_answer': self.student_answer,
             'correct_answer': self.correct_answer,
@@ -186,8 +218,17 @@ class QuestionResponse(db.Model):
             'parsed_payload': self.parsed_payload or {},
             'correct_option_text': self.correct_option_text,
             'marks_awarded': float(self.marks_awarded) if self.marks_awarded is not None else 0,
-            'difficulty': self.difficulty,
+            'difficulty': mq.difficulty if mq else self.difficulty,
             'status': self.status,
+            'is_unlocked': is_unlocked,
+            # All options with bilingual text
+            'option_a': {'id': mq.option_a_id, 'text': mq.option_a_text, 'hin': mq.option_a_hin, 'eng': mq.option_a_eng} if mq else {},
+            'option_b': {'id': mq.option_b_id, 'text': mq.option_b_text, 'hin': mq.option_b_hin, 'eng': mq.option_b_eng} if mq else {},
+            'option_c': {'id': mq.option_c_id, 'text': mq.option_c_text, 'hin': mq.option_c_hin, 'eng': mq.option_c_eng} if mq else {},
+            'option_d': {'id': mq.option_d_id, 'text': mq.option_d_text, 'hin': mq.option_d_hin, 'eng': mq.option_d_eng} if mq else {},
+            # AI solutions in multiple languages
+            'solution_hin': mq.solution_hin if is_unlocked and mq else None,
+            'solution_eng': mq.solution_eng if is_unlocked and mq else None,
             'solutions': [s.to_dict() for s in sols]
         }
 
@@ -347,3 +388,24 @@ class QuestionPackPurchase(db.Model):
 
     def __repr__(self):
         return f'<QuestionPackPurchase user={self.user_id} pack={self.pack_id}>'
+
+
+class PointsPack(db.Model):
+    __tablename__ = 'points_packs'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    points = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, default=0.0)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'points': self.points,
+            'price': self.price,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+

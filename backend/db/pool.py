@@ -50,6 +50,22 @@ def init_db(app):
             })
             _ensure_columns('master_questions', {
                 'parsed_payload': 'parsed_payload JSON',
+                'question_text_hin': 'question_text_hin TEXT',
+                'question_text_eng': 'question_text_eng TEXT',
+                'subject': 'subject VARCHAR(100)',
+                'chapter': 'chapter VARCHAR(200)',
+                'question_type': 'question_type VARCHAR(50)',
+                'difficulty': 'difficulty VARCHAR(20)',
+                'option_a_hin': 'option_a_hin TEXT',
+                'option_a_eng': 'option_a_eng TEXT',
+                'option_b_hin': 'option_b_hin TEXT',
+                'option_b_eng': 'option_b_eng TEXT',
+                'option_c_hin': 'option_c_hin TEXT',
+                'option_c_eng': 'option_c_eng TEXT',
+                'option_d_hin': 'option_d_hin TEXT',
+                'option_d_eng': 'option_d_eng TEXT',
+                'solution_hin': 'solution_hin TEXT',
+                'solution_eng': 'solution_eng TEXT',
             })
             _ensure_columns('ai_solutions', {
                 'user_id': 'user_id INTEGER REFERENCES users(id) ON DELETE SET NULL',

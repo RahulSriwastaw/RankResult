@@ -19,12 +19,15 @@ import {
   Title, Tooltip, Legend,
 } from 'chart.js';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-const QuestionItem = ({ q, resultId, onUnlock, authUser }) => {
+const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(q.is_unlocked || false);
   const [solutions, setSolutions] = useState(q.solutions || []);
   const [solIndex, setSolIndex] = useState(0);
 
@@ -35,10 +38,20 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser }) => {
   const badge = { correct: 'bg-green-600', wrong: 'bg-red-600', unattempted: 'bg-gray-700' };
 
   const handleUnlock = async () => {
+    if (!authUser || !authUser.id) {
+      toast.error('Please log in or create an account to view AI solutions!');
+      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    if (balance < 5) {
+      toast.error('Insufficient points balance. Please buy points packs first.');
+      router.push('/marketplace');
+      return;
+    }
     setLoading(true);
     try {
       const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/unlock`, { 
-        user_id: authUser?.id || 1 
+        user_id: authUser.id 
       });
       setSolutions(res.data.solutions);
       setIsUnlocked(true);
@@ -50,10 +63,20 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser }) => {
   };
 
   const handleGenerate = async () => {
+    if (!authUser || !authUser.id) {
+      toast.error('Please log in or create an account to generate AI solutions!');
+      router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    if (balance < 5) {
+      toast.error('Insufficient points balance. Please buy points packs first.');
+      router.push('/marketplace');
+      return;
+    }
     setLoading(true);
     try {
       const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/generate`, { 
-        user_id: authUser?.id || 1 
+        user_id: authUser.id 
       });
       const tempSol = res.data.solution;
       setSolutions(prev => [...prev, tempSol]);
@@ -66,10 +89,14 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser }) => {
   };
 
   const handlePublish = async (tempSol) => {
+    if (!authUser || !authUser.id) {
+      toast.error('Please login first to publish solutions');
+      return;
+    }
     setLoading(true);
     try {
       const res = await axios.post(`http://localhost:5000/api/questions/${resultId}/questions/${q.id}/publish`, {
-        user_id: authUser?.id || 1,
+        user_id: authUser.id,
         solution: tempSol
       });
       // Replace temp solution with published one from server
@@ -234,6 +261,7 @@ export default function ResultPage() {
   const [authUser, setAuthUser] = useState(null);
   const [rank, setRank] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState('pdf');
   const marksheetRef = useRef(null);
   const { theme, setTheme } = useTheme();
 
@@ -260,11 +288,14 @@ export default function ResultPage() {
             setRank(rankRes.data);
           }
         } catch {}
-        try {
-          const uid = authUser?.id || 1;
-          const pRes = await axios.get(`http://localhost:5000/api/user/${uid}/points`);
-          setBalance(pRes.data.balance);
-        } catch {}
+        if (authUser && authUser.id) {
+          try {
+            const pRes = await axios.get(`http://localhost:5000/api/user/${authUser.id}/points`);
+            setBalance(pRes.data.balance);
+          } catch {}
+        } else {
+          setBalance(0);
+        }
       } catch (err) {
         toast.error(err.response?.data?.error || 'Result not found');
       } finally { setLoading(false); }
@@ -295,32 +326,80 @@ export default function ResultPage() {
     if (!marksheetRef.current) return;
     setDownloading(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(marksheetRef.current, {
-        backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: true
-      });
       const rollNo = data?.result?.roll_number || 'result';
       if (format === 'image') {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(marksheetRef.current, {
+          backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: true
+        });
         const link = document.createElement('a');
         link.download = `RankVeda_Scorecard_${rollNo}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
         toast.success('✅ Score card downloaded!');
       } else {
-        const { jsPDF } = await import('jspdf');
-        const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width / 2, canvas.height / 2] });
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
-        pdf.save(`RankVeda_Scorecard_${rollNo}.pdf`);
+        // Request server-rendered PDF (preserves selectable text and quality)
+        const resultId = data?.result?.id || data?.id;
+        if (!resultId) throw new Error('Result id missing');
+        // Use frontend proxy route to avoid CORS / network issues in dev
+        const axRes = await axios.get(`/api/results/${encodeURIComponent(resultId)}/pdf`, { responseType: 'blob', headers: { Accept: 'application/pdf' } });
+        if (!axRes || !axRes.data) {
+          throw new Error('PDF generation failed on server');
+        }
+        const blob = axRes.data;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `RankVeda_Scorecard_${rollNo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
         toast.success('✅ PDF downloaded!');
       }
     } catch (e) { toast.error('Download failed: ' + e.message); }
     finally { setDownloading(false); }
   };
 
-  const handleShare = () => {
-    const text = `I scored ${data?.result?.score} marks in ${data?.result?.subject || 'the exam'}! Check your score at RankVeda.`;
-    if (navigator.share) navigator.share({ title: 'My RankVeda Score Card', text, url: window.location.href });
-    else { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }
+  const handleShare = async () => {
+    const message = `I scored ${data?.result?.score} marks in ${data?.result?.subject || 'the exam'} on RankVeda. Check your own score prediction and compare with the official exam experience.`;
+    const shareUrl = 'https://rankveda.in/';
+    const shareData = {
+      title: 'My RankVeda Score Card',
+      text: message,
+      url: shareUrl
+    };
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(marksheetRef.current, {
+        backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: true
+      });
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const file = new File([blob], `RankVeda_Scorecard_${data?.result?.roll_number || 'scorecard'}.png`, { type: 'image/png' });
+      const sharePayload = { ...shareData, files: [file] };
+
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        await navigator.share(sharePayload);
+        toast.success('Shared scorecard with image, message, and link!');
+        return;
+      }
+    } catch (err) {
+      // ignore image share failure and fall back to text/link share
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        toast.success('Shared scorecard message and link!');
+        return;
+      } catch (err) {
+        // continue to fallback
+      }
+    }
+
+    navigator.clipboard.writeText(`${message} ${shareUrl}`);
+    toast.success('Share text copied!');
   };
 
   if (loading) return (
@@ -351,7 +430,8 @@ export default function ResultPage() {
   const wrongCount = result.total_wrong || questions.filter(q => q.status === 'wrong').length;
   const naCount = result.total_unattempted || questions.filter(q => q.status === 'unattempted').length;
   const totalQs = questions.length || 100;
-  const accuracy = (correctCount + wrongCount) > 0 ? Math.round((correctCount / (correctCount + wrongCount)) * 100) : 0;
+  const rawAccuracy = (correctCount + wrongCount) > 0 ? (correctCount / (correctCount + wrongCount)) * 100 : 0;
+  const accuracy = Number(rawAccuracy.toFixed(2));
 
   const candidateForCard = {
     name: result.candidate_name,
@@ -413,9 +493,9 @@ export default function ResultPage() {
 
       <div className="min-h-screen bg-gray-950 text-white">
         {/* NAV */}
-        <nav className="sticky top-0 z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-4 py-3 flex items-center justify-between gap-3">
+        <nav className="sticky top-0 z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-3 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg font-black gradient-text">⚡ RankVeda</span>
+            <span className="text-base sm:text-lg font-black gradient-text">⚡ RankVeda</span>
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
             {authUser && <span className="text-xs text-gray-400 hidden sm:block">👤 {authUser.name}</span>}
@@ -430,10 +510,10 @@ export default function ResultPage() {
           </div>
         </nav>
 
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        <div className="max-w-6xl mx-auto px-3 py-4 space-y-5">
 
           {/* STAT CARDS */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {[
               { icon: FaTrophy, label: 'Score', value: Number(result.score || 0).toFixed(2), color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/30' },
               { icon: FaTrophy, label: 'Rank', value: `#${rank?.rank ?? result.rank ?? '—'}`, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
@@ -443,19 +523,19 @@ export default function ResultPage() {
               { icon: FaBullseye, label: 'Accuracy', value: `${accuracy}%`, color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/30' },
             ].map(({ icon: Icon, label, value, color, bg }, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                className={`${bg} border rounded-xl p-3 text-center`}>
-                <Icon className={`${color} text-xl mx-auto mb-1`} />
-                <div className={`text-xl font-black ${color}`}>{value}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+                className={`${bg} border rounded-xl p-2 text-center`}>
+                <Icon className={`${color} text-base mx-auto mb-1`} />
+                <div className={`text-base sm:text-lg font-black ${color}`}>{value}</div>
+                <div className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5">{label}</div>
               </motion.div>
             ))}
           </div>
 
           {/* MARKSHEET CARD — full width */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h2 className="text-lg font-bold">🎫 Official Score Card</h2>
-              <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+              <h2 className="text-sm sm:text-base font-bold">🎫 Official Score Card</h2>
+              <div className="flex flex-wrap gap-2 items-center">
                 <button
                   onClick={() => {
                     if (window.history.length > 1) {
@@ -464,17 +544,24 @@ export default function ResultPage() {
                       router.push('/');
                     }
                   }}
-                  className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition"
+                  className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-white px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition"
                 >
-                  <FaChevronLeft className="text-xs" /> Check Another
+                  <FaChevronLeft className="text-[10px]" /> Check Another
                 </button>
-                <button onClick={() => handleDownload('image')} disabled={downloading}
-                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition disabled:opacity-50">
-                  <FaDownload /> {downloading ? 'Downloading...' : 'Download PNG'}
-                </button>
-                <button onClick={() => handleDownload('pdf')} disabled={downloading}
-                  className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition disabled:opacity-50">
-                  <FaDownload /> PDF
+                <div className="flex items-center gap-2">
+                  <select value={downloadFormat} onChange={e => setDownloadFormat(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 text-white text-[10px] sm:text-xs rounded-xl px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="pdf">PDF</option>
+                    <option value="image">PNG</option>
+                  </select>
+                  <button onClick={() => handleDownload(downloadFormat)} disabled={downloading}
+                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition disabled:opacity-50">
+                    <FaDownload className="text-[11px]" /> {downloading ? 'Downloading...' : `Download ${downloadFormat.toUpperCase()}`}
+                  </button>
+                </div>
+                <button onClick={handleShare}
+                  className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-2.5 py-1.5 rounded-xl text-[10px] sm:text-xs font-medium transition">
+                  <FaShareAlt className="text-[11px]" /> Share Result
                 </button>
               </div>
             </div>
@@ -484,8 +571,8 @@ export default function ResultPage() {
           </motion.div>
 
           {/* CHARTS */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-4">
               <h3 className="font-bold mb-4 text-gray-200">{sections.length > 1 ? '📊 Section-wise Breakdown' : '📊 Overall Breakdown'}</h3>
               <Bar data={sectionBarData} options={{
                 responsive: true,
@@ -496,7 +583,7 @@ export default function ResultPage() {
                 }
               }} height={120} />
             </div>
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col items-center">
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col items-center">
               <h3 className="font-bold mb-4 text-gray-200 self-start">🎯 Attempt Distribution</h3>
               <div className="w-48 relative">
                 <Doughnut data={donutData} options={{
@@ -511,52 +598,11 @@ export default function ResultPage() {
             </div>
           </div>
 
-          {/* SECTION TABLE */}
-          {sections.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-              className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-              <div className="p-4 border-b border-gray-800">
-                <h3 className="font-bold text-gray-200">📋 Section-wise Score Summary</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-800/70 text-gray-400 text-xs uppercase tracking-wider">
-                      {['Section', 'Total Qs', 'Not Attempted', 'Right ✓', 'Wrong ✗', 'Marks'].map((h, i) => (
-                        <th key={i} className={`px-4 py-3 font-semibold ${i === 0 ? 'text-left' : 'text-center'}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sections.map((sec, i) => (
-                      <tr key={i} className="border-t border-gray-800 hover:bg-gray-800/40 transition">
-                        <td className="px-4 py-3 font-medium text-gray-200">{sec.name}</td>
-                        <td className="px-4 py-3 text-center text-gray-400">{sec.total ?? '—'}</td>
-                        <td className="px-4 py-3 text-center text-gray-500">{sec.na ?? '—'}</td>
-                        <td className="px-4 py-3 text-center font-bold text-green-400">{sec.right ?? '—'}</td>
-                        <td className="px-4 py-3 text-center font-bold text-red-400">{sec.wrong ?? '—'}</td>
-                        <td className="px-4 py-3 text-center font-bold text-indigo-400">{sec.marks != null ? Number(sec.marks).toFixed(2) : '—'}</td>
-                      </tr>
-                    ))}
-                    <tr className="border-t-2 border-yellow-600 bg-yellow-900/20 font-bold">
-                      <td className="px-4 py-3 text-yellow-300">Total</td>
-                      <td className="px-4 py-3 text-center text-yellow-300">{sections.reduce((s, r) => s + (r.total || 0), 0) || totalQs}</td>
-                      <td className="px-4 py-3 text-center text-yellow-300">{sections.reduce((s, r) => s + (r.na || 0), 0) || naCount}</td>
-                      <td className="px-4 py-3 text-center text-green-400">{sections.reduce((s, r) => s + (r.right || 0), 0) || correctCount}</td>
-                      <td className="px-4 py-3 text-center text-red-400">{sections.reduce((s, r) => s + (r.wrong || 0), 0) || wrongCount}</td>
-                      <td className="px-4 py-3 text-center text-indigo-300 text-base">{Number(result.score || 0).toFixed(2)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
           {/* QUESTION ANALYSIS */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="font-bold text-gray-200">📝 Question Analysis <span className="text-gray-500 font-normal text-sm">({filteredQs.length} questions)</span></h3>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1 flex-wrap">
                 {[
                   { key: 'all', label: 'All', active: 'bg-gray-600', inactive: 'bg-gray-800 text-gray-400' },
                   { key: 'correct', label: '✅ Correct', active: 'bg-green-700 text-white', inactive: 'bg-gray-800 text-gray-400' },
@@ -580,7 +626,7 @@ export default function ResultPage() {
                     <div className="space-y-2">
                       {sectionQs.map((q, idx) => (
                         <motion.div key={q.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.008 }}>
-                          <QuestionItem q={q} resultId={result.id} onUnlock={(nb) => setBalance(nb)} authUser={authUser} />
+                          <QuestionItem q={q} resultId={result.id} onUnlock={(nb) => setBalance(nb)} authUser={authUser} balance={balance} />
                         </motion.div>
                       ))}
                     </div>
@@ -592,7 +638,7 @@ export default function ResultPage() {
           </div>
 
           {/* POINTS SECTION */}
-          <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-700/30 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4">
+          <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-700/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <FaCoins className="text-yellow-400" />
@@ -601,7 +647,7 @@ export default function ResultPage() {
               <div className="text-4xl font-black text-yellow-400">{balance}</div>
               <div className="text-xs text-gray-500 mt-1">5 pts per AI solution unlock</div>
             </div>
-            <Link href="/marketplace" className="bg-purple-700 hover:bg-purple-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium transition">
+            <Link href="/marketplace" className="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-xs sm:text-sm font-medium transition">
               <FaShoppingBag /> Question Bank
             </Link>
           </div>

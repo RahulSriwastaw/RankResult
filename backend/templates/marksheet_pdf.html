@@ -1,0 +1,137 @@
+<!doctype html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RankVeda Score Card</title>
+  <style>
+    body { background: #0a0a1a; font-family: 'Segoe UI', Inter, Arial, sans-serif; color: #f1f5f9; margin: 12px; }
+    .card { width: 100%; background: #0a0a1a; color: #f1f5f9; border-radius: 16px; overflow:hidden; box-sizing: border-box; border: 1px solid #2a2a4a; }
+    .top-line, .bottom-line { height: 3px }
+    .accent { background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top-line accent"></div>
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e1b4b 100%); padding:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(99,102,241,0.18)">
+      <div style="display:flex; align-items:center; gap:10px; flex-shrink:0">
+        <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #6366f1, #a855f7); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; color:#fff; box-shadow:0 3px 10px rgba(99,102,241,0.35)">⚡</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#fff; letter-spacing:-0.3px; background:linear-gradient(90deg, #a5b4fc, #c4b5fd, #f9a8d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent">RankVeda</div>
+          <div style="font-size:8px; color:rgba(165,180,252,0.7); margin-top:1px; letter-spacing:0.4px">OFFICIAL SCORE CARD</div>
+        </div>
+      </div>
+
+      <div style="flex:1; text-align:center; padding:0 10px">
+        <div style="font-size:12px; font-weight:700; color:#e2e8f0">{{ candidate.exam_name or 'Exam' }}</div>
+        {% if candidate.subject %}<div style="font-size:9px; color:rgba(165,180,252,0.62); margin-top:2px">{{ candidate.subject }}</div>{% endif %}
+      </div>
+
+      <div style="text-align:right; flex-shrink:0; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.22); border-radius:8px; padding:6px 10px">
+        <div style="font-size:8px; color:rgba(165,180,252,0.58); letter-spacing:0.8px; text-transform:uppercase">Generated</div>
+        <div style="font-size:11px; font-weight:700; color:#a5b4fc; margin-top:2px">{{ (now.strftime('%d %b %Y')) if now else '' }}</div>
+      </div>
+    </div>
+
+    <!-- Candidate Info -->
+    <div style="display:flex; border-bottom:1px solid #2a2a4a; background:#111128;">
+      <div style="flex:1">
+        <table style="width:100%; border-collapse:collapse; font-size:11.5px">
+          <tbody>
+            {% set rows = [ ['Candidate Name', candidate.name], ['Registration Number', candidate.registration_no], ['Roll Number', candidate.roll_number], ['Community / Category', candidate.community], ['Test Centre', candidate.test_centre_name], ['Exam Date', candidate.test_date], ['Exam Time / Shift', candidate.test_time] ] %}
+            {% for label, value in rows %}
+              <tr style="background: {% if loop.index0 % 2 == 0 %}transparent{% else %}#0f0f22{% endif %};">
+                <td style="padding:6px 10px; font-weight:600; color:#64748b; border-bottom:1px solid #2a2a4a; width:120px; border-right:1px solid #2a2a4a; font-size:10px">{{ label }}</td>
+                <td style="padding:6px 10px; color:#f1f5f9; border-bottom:1px solid #2a2a4a; font-family:{{ 'monospace' if loop.index in [2,3] else 'inherit' }}; font-size:11px; font-weight:{{ '700' if loop.index0==0 else '500' }}">{{ value or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section table -->
+    <div style="background:#111128">
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px">
+        <thead>
+          <tr style="background:linear-gradient(90deg, rgba(99,102,241,0.20) 0%, rgba(168,85,247,0.16) 100%); border-bottom:1px solid rgba(99,102,241,0.28);">
+            {% for h in ['Section','Total','NA','Right','Wrong','Marks'] %}
+              <th style="padding:6px 8px; color:#a5b4fc; font-weight:700; text-align:{{ 'left' if loop.index0==0 else 'center' }}; font-size:9px; letter-spacing:0.4px; text-transform:uppercase; border-right: {% if not loop.last %}1px solid rgba(99,102,241,0.16){% else %}none{% endif %}">{{ h }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% if score.sections and score.sections|length > 0 %}
+            {% for sec in score.sections %}
+              <tr style="background: {% if loop.index0 % 2 == 0 %}transparent{% else %}#0f0f22{% endif %};">
+                <td style="padding:6px 8px; font-weight:600; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#f1f5f9; font-size:11px">{{ sec.name or ('Section ' ~ loop.index) }}</td>
+                <td style="padding:6px 8px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#94a3b8; font-weight:600; font-size:11px">{{ sec.total or '—' }}</td>
+                <td style="padding:6px 8px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#64748b; font-size:11px">{{ sec.na or '—' }}</td>
+                <td style="padding:6px 8px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#22c55e; font-weight:700; font-size:11px">{{ sec.right or sec.correct or '—' }}</td>
+                <td style="padding:6px 8px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#ef4444; font-weight:700; font-size:11px">{{ sec.wrong or '—' }}</td>
+                <td style="padding:6px 8px; text-align:center; border-bottom:1px solid #2a2a4a; font-weight:700; color:#818cf8; font-size:11px">{% if sec.marks is not none %}{{ '%.2f'|format(sec.marks) }}{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr style="background:#0f0f22">
+              <td style="padding:7px 10px; font-weight:600; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#f1f5f9; font-size:12px">Overall</td>
+              <td style="padding:7px 10px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#94a3b8; font-size:12px">—</td>
+              <td style="padding:7px 10px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#64748b; font-size:12px">{{ score.unattempted or 0 }}</td>
+              <td style="padding:7px 10px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#22c55e; font-weight:700; font-size:12px">{{ score.correct or 0 }}</td>
+              <td style="padding:7px 10px; text-align:center; border-bottom:1px solid #2a2a4a; border-right:1px solid #2a2a4a; color:#ef4444; font-weight:700; font-size:12px">{{ score.wrong or 0 }}</td>
+              <td style="padding:7px 10px; text-align:center; border-bottom:1px solid #2a2a4a; font-weight:700; color:#818cf8; font-size:12px">{% if score.total_marks is not none %}{{ '%.2f'|format(score.total_marks) }}{% else %}—{% endif %}</td>
+            </tr>
+          {% endif %}
+
+          <!-- Total Row -->
+          <tr style="background:linear-gradient(90deg, rgba(234,179,8,0.12) 0%, rgba(234,179,8,0.06) 100%); border-top:1px solid rgba(234,179,8,0.24); font-weight:800;">
+            <td style="padding:6px 8px; border-right:1px solid rgba(234,179,8,0.16); color:#eab308; letter-spacing:0.5px; font-size:9px; text-transform:uppercase">Total</td>
+            <td style="padding:6px 8px; text-align:center; border-right:1px solid rgba(234,179,8,0.16); color:#eab308; font-size:11px">—</td>
+            <td style="padding:6px 8px; text-align:center; border-right:1px solid rgba(234,179,8,0.16); color:#eab308; font-size:11px">{{ score.unattempted or 0 }}</td>
+            <td style="padding:6px 8px; text-align:center; border-right:1px solid rgba(234,179,8,0.16); color:#eab308; font-size:11px">{{ score.correct or 0 }}</td>
+            <td style="padding:6px 8px; text-align:center; border-right:1px solid rgba(234,179,8,0.16); color:#eab308; font-size:11px">{{ score.wrong or 0 }}</td>
+            <td style="padding:6px 8px; text-align:center; color:#818cf8; font-size:12px">{% if score.total_marks is not none %}{{ '%.2f'|format(score.total_marks) }}{% else %}—{% endif %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Stats grid -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid #2a2a4a; border-bottom:1px solid #2a2a4a; background:#0a0a1a">
+      {% set accuracy = ( (score.correct / ( (score.correct + score.wrong) if (score.correct + score.wrong) > 0 else 1) ) * 100 ) if (score.correct + score.wrong) > 0 else 0 %}
+      {% set cards = [
+        { 'label':'LIVE RANK', 'value': (('#' ~ rank.rank) if rank.rank else '—'), 'sub': (('of ' ~ (rank.total_appeared|string) ~ ' students') if rank.total_appeared else 'Real-time rank'), 'icon':'🏆', 'gradStart':'rgba(239,68,68,0.12)', 'gradEnd':'rgba(239,68,68,0.05)', 'valueColor':'#f87171', 'borderColor':'rgba(239,68,68,0.25)', 'labelColor':'#fca5a5' },
+        { 'label':'PERCENTILE', 'value': ( (rank.percentile|string ~ '%') if rank.percentile else '—'), 'sub': ( (('Top ' ~ ( (100 - rank.percentile)|round(1) ) ~ '%') ) if rank.percentile else 'Based on live data'), 'icon':'📊', 'gradStart':'rgba(34,197,94,0.12)', 'gradEnd':'rgba(34,197,94,0.05)', 'valueColor':'#4ade80', 'borderColor':'rgba(34,197,94,0.25)', 'labelColor':'#86efac' },
+        { 'label':'TOTAL SCORE', 'value': ( (score.total_marks|string) if score.total_marks is not none else '—' ), 'sub': ( 'out of ' ~ (score.max_marks|string if score.max_marks else '—') ), 'icon':'⭐', 'gradStart':'rgba(99,102,241,0.15)', 'gradEnd':'rgba(99,102,241,0.06)', 'valueColor':'#818cf8', 'borderColor':'rgba(99,102,241,0.3)', 'labelColor':'#a5b4fc' },
+        { 'label':'ACCURACY', 'value': ( (accuracy|string ~ '%') if accuracy is not none else '—'), 'sub': ( (score.correct|string ~ ' correct of ' ~ ((score.correct + score.wrong)|string) ~ ' attempted') if (score.correct + score.wrong) >= 0 else '' ), 'icon':'🎯', 'gradStart':'rgba(168,85,247,0.12)', 'gradEnd':'rgba(168,85,247,0.05)', 'valueColor':'#c084fc', 'borderColor':'rgba(168,85,247,0.25)', 'labelColor':'#d8b4fe' }
+      ] %}
+      {% for card in cards %}
+        <div style="padding:10px 8px; text-align:center; background:linear-gradient(135deg, {{ card.gradStart }} 0%, {{ card.gradEnd }} 100%); border-right: {% if not loop.last %}1px solid {{ card.borderColor }}{% else %}none{% endif %}; position:relative">
+          <div style="font-size:16px; margin-bottom:4px">{{ card.icon }}</div>
+          <div style="font-size:8px; font-weight:800; color:{{ card.labelColor }}; letter-spacing:1.6px; margin-bottom:3px; text-transform:uppercase">{{ card.label }}</div>
+          <div style="font-size:20px; font-weight:900; color:{{ card.valueColor }}; line-height:1.05; letter-spacing:-1px; text-shadow:0 0 12px {{ card.valueColor }}40">{{ card.value }}</div>
+          <div style="font-size:8.5px; color:#64748b; margin-top:3px">{{ card.sub }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#07071a; padding:8px 12px; display:flex; align-items:center; gap:10px; font-size:9px; color:#64748b; border-top:1px solid #2a2a4a; flex-wrap:wrap">
+      <span style="font-weight:700; color:#94a3b8">Marking Scheme:</span>
+      <span>Correct: <strong style="color:#22c55e">+1</strong></span>
+      <span>Wrong: <strong style="color:#ef4444">-1/3</strong></span>
+      <span>Unattempted: <strong style="color:#94a3b8">0</strong></span>
+      <span style="margin-left:auto; display:flex; align-items:center; gap:6px">
+        <span style="display:inline-flex; align-items:center; gap:4px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.22); border-radius:16px; padding:2px 8px; color:#a5b4fc; font-size:9px; font-weight:700">⚡ RankVeda.in</span>
+        <span style="color:#64748b; font-size:8.5px">Score may vary</span>
+      </span>
+    </div>
+
+    <div class="bottom-line accent"></div>
+  </div>
+</body>
+</html>

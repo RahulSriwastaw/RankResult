@@ -50,6 +50,7 @@ export default function PackAnalysis() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [activeTab, setActiveTab] = useState('students');
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -62,6 +63,21 @@ export default function PackAnalysis() {
     max_score: '',
     search: ''
   });
+  const [questionFilters, setQuestionFilters] = useState({
+    exam_id: '',
+    shift_date: '',
+    shift_time: '',
+    subject: '',
+    chapter: '',
+    difficulty: '',
+    question_type: '',
+    search: ''
+  });
+  const [packQuestionsPreview, setPackQuestionsPreview] = useState([]);
+  const [packQuestionsLoading, setPackQuestionsLoading] = useState(false);
+  const [packQuestionsPage, setPackQuestionsPage] = useState(1);
+  const [packQuestionsPages, setPackQuestionsPages] = useState(1);
+  const [packQuestionsTotal, setPackQuestionsTotal] = useState(0);
 
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -116,6 +132,14 @@ export default function PackAnalysis() {
     }
   }, [id, token]);
 
+  useEffect(() => {
+    if (examsList.length === 1) {
+      const defaultExamId = examsList[0].id;
+      setQuestionFilters((prev) => ({ ...prev, exam_id: prev.exam_id || defaultExamId }));
+      setFilters((prev) => ({ ...prev, exam_id: prev.exam_id || defaultExamId }));
+    }
+  }, [examsList]);
+
   const handleApplyFilters = (e) => {
     if (e) e.preventDefault();
     fetchAnalysis(1);
@@ -134,6 +158,68 @@ export default function PackAnalysis() {
     });
     // Triggers refetch since states reset
     setTimeout(() => fetchAnalysis(1), 50);
+  };
+
+  const fetchPackQuestions = async (pageNumber = 1) => {
+    if (!id || !token) return;
+    setPackQuestionsLoading(true);
+    try {
+      const queryParams = new URLSearchParams({
+        page: pageNumber,
+        per_page: 100,
+        ...questionFilters,
+      });
+
+      const res = await fetch(`${API}/api/marketplace/packs/${id}/questions?${queryParams.toString()}`, {
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPackQuestionsPreview(Array.isArray(data.questions) ? data.questions : []);
+        setPackQuestionsTotal(data.total || 0);
+        setPackQuestionsPage(data.page || 1);
+        setPackQuestionsPages(data.pages || 1);
+      } else {
+        alert(data.error || 'Failed to load pack questions preview');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while loading pack questions');
+    } finally {
+      setPackQuestionsLoading(false);
+    }
+  };
+
+  const handleExportPackQuestions = async () => {
+    if (!id || !token) return;
+    const queryParams = new URLSearchParams({
+      export: 'csv',
+      ...questionFilters,
+      per_page: 1000,
+    });
+
+    try {
+      const res = await fetch(`${API}/api/marketplace/packs/${id}/questions?${queryParams.toString()}`, {
+        headers: authHeaders,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Failed to export pack questions');
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `pack_${id}_questions_export.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert('Network error while exporting questions');
+    }
   };
 
   const saveOrgName = async () => {
@@ -399,239 +485,475 @@ export default function PackAnalysis() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* Left Column: Filter Panel (no-print) */}
-            <div className="no-print lg:col-span-1 space-y-6">
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                  <FaFilter className="text-indigo-400" /> Filter Candidates
-                </h3>
-                <form onSubmit={handleApplyFilters} className="space-y-4">
-                  
-                  {/* Filter by Exam */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Target Exam</label>
-                    <select
-                      value={filters.exam_id}
-                      onChange={(e) => setFilters({ ...filters, exam_id: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="">All Exams in Pack</option>
-                      {examsList.map(e => (
-                        <option key={e.id} value={e.id}>{e.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filter by Category */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Category</label>
-                    <select
-                      value={filters.category}
-                      onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="">All Categories</option>
-                      <option value="UR">UR</option>
-                      <option value="OBC">OBC</option>
-                      <option value="SC">SC</option>
-                      <option value="ST">ST</option>
-                      <option value="EWS">EWS</option>
-                    </select>
-                  </div>
-
-                  {/* Marks Ranges */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Min Marks</label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={filters.min_score}
-                        onChange={(e) => setFilters({ ...filters, min_score: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Max Marks</label>
-                      <input
-                        type="number"
-                        placeholder="200"
-                        value={filters.max_score}
-                        onChange={(e) => setFilters({ ...filters, max_score: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Date & Shifts */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Shift Subject / Keyword</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. English, General..."
-                      value={filters.subject}
-                      onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* Search Candidate */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Search Candidate</label>
-                    <input
-                      type="text"
-                      placeholder="Search name or roll..."
-                      value={filters.search}
-                      onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      type="submit"
-                      className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs"
-                    >
-                      Apply
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleResetFilters}
-                      className="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Category-wise Averages Card */}
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-                <h3 className="text-sm font-semibold mb-4">📊 Category breakdown</h3>
-                {stats.category_stats.length === 0 ? (
-                  <p className="text-gray-500 text-xs">No statistics available.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {stats.category_stats.map(c => (
-                      <div key={c.category} className="flex justify-between items-center text-xs">
-                        <span className="font-semibold text-gray-400">{c.category}</span>
-                        <div className="flex gap-3">
-                          <span className="text-gray-500">{c.count} students</span>
-                          <span className="text-indigo-400 font-bold">Avg: {c.average_score}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-2 inline-flex">
+              <button
+                type="button"
+                onClick={() => setActiveTab('students')}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${activeTab === 'students' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800'}`}
+              >
+                Student Data
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('questions')}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold transition ${activeTab === 'questions' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800'}`}
+              >
+                Pack Questions
+              </button>
             </div>
-
-            {/* Right Column: Candidates list */}
-            <div className="lg:col-span-2 space-y-6">
-              
-              {/* Leaderboard Table Card */}
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg print-card">
-                <div className="no-print flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                  <div>
-                    <h3 className="text-sm font-semibold">Rankings Leaderboard</h3>
-                    <p className="text-gray-500 text-xs mt-0.5">{totalItems} results found</p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleExportCSV}
-                      className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <FaDownload className="text-[10px]" /> Export CSV/Excel
-                    </button>
-                    <button
-                      onClick={triggerPDFPrint}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                    >
-                      <FaFilePdf className="text-[10px]" /> Print branded PDF
-                    </button>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left print-table">
-                    <thead>
-                      <tr className="border-b border-gray-800 text-gray-400 font-medium">
-                        <th className="py-3 px-3">Rank</th>
-                        <th className="py-3 px-3">Candidate Name</th>
-                        <th className="py-3 px-3">Roll Number</th>
-                        <th className="py-3 px-3">Category</th>
-                        <th className="py-3 px-3">Shift Details</th>
-                        <th className="py-3 px-3 text-right">Score</th>
-                        <th className="py-3 px-3 text-right">Percentile</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {candidates.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="py-10 text-center text-gray-500">
-                            No candidate data found matching the selected filters.
-                          </td>
-                        </tr>
-                      ) : (
-                        candidates.map((cand, idx) => (
-                          <tr key={idx} className="border-b border-gray-800/60 hover:bg-gray-800/10 text-gray-300">
-                            <td className="py-2.5 px-3 font-semibold text-indigo-400">#{cand.rank}</td>
-                            <td className="py-2.5 px-3 font-medium text-white">{cand.candidate_name}</td>
-                            <td className="py-2.5 px-3 font-mono text-gray-500">{cand.roll_number}</td>
-                            <td className="py-2.5 px-3">
-                              <span className="px-2 py-0.5 rounded bg-gray-800/80 text-gray-300 text-[10px] uppercase font-bold">
-                                {cand.category}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <p className="font-semibold text-[10px] text-gray-400 truncate max-w-[120px]">{cand.subject || '—'}</p>
-                              <p className="text-[10px] text-gray-600">{cand.test_date} · {cand.test_time}</p>
-                            </td>
-                            <td className="py-2.5 px-3 text-right font-bold text-white">{cand.score}</td>
-                            <td className="py-2.5 px-3 text-right text-gray-400">{cand.percentile}%</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="no-print mt-5 flex justify-center gap-2">
-                    <button
-                      onClick={() => fetchAnalysis(Math.max(1, page - 1))}
-                      disabled={page === 1}
-                      className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
-                    >
-                      ‹
-                    </button>
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
-                      <button
-                        key={p}
-                        onClick={() => fetchAnalysis(p)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${page === p ? 'bg-indigo-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => fetchAnalysis(Math.min(totalPages, page + 1))}
-                      disabled={page === totalPages}
-                      className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
-                    >
-                      ›
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
           </div>
+
+          {activeTab === 'students' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* Left Column: Filter Panel (no-print) */}
+              <div className="no-print lg:col-span-1 space-y-6">
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                    <FaFilter className="text-indigo-400" /> Filter Candidates
+                  </h3>
+                  <form onSubmit={handleApplyFilters} className="space-y-4">
+                    
+                    {/* Filter by Exam */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Target Exam</label>
+                      <select
+                        value={filters.exam_id}
+                        onChange={(e) => setFilters({ ...filters, exam_id: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="">All Exams in Pack</option>
+                        {examsList.map(e => (
+                          <option key={e.id} value={e.id}>{e.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filter by Category */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Category</label>
+                      <select
+                        value={filters.category}
+                        onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="">All Categories</option>
+                        <option value="UR">UR</option>
+                        <option value="OBC">OBC</option>
+                        <option value="SC">SC</option>
+                        <option value="ST">ST</option>
+                        <option value="EWS">EWS</option>
+                      </select>
+                    </div>
+
+                    {/* Marks Ranges */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Min Marks</label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={filters.min_score}
+                          onChange={(e) => setFilters({ ...filters, min_score: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Max Marks</label>
+                        <input
+                          type="number"
+                          placeholder="200"
+                          value={filters.max_score}
+                          onChange={(e) => setFilters({ ...filters, max_score: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Date & Shifts */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Shift Subject / Keyword</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. English, General..."
+                        value={filters.subject}
+                        onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    {/* Search Candidate */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Search Candidate</label>
+                      <input
+                        type="text"
+                        placeholder="Search name or roll..."
+                        value={filters.search}
+                        onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="submit"
+                        className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold text-xs"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Category-wise Averages Card */}
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                  <h3 className="text-sm font-semibold mb-4">📊 Category breakdown</h3>
+                  {stats.category_stats.length === 0 ? (
+                    <p className="text-gray-500 text-xs">No statistics available.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stats.category_stats.map(c => (
+                        <div key={c.category} className="flex justify-between items-center text-xs">
+                          <span className="font-semibold text-gray-400">{c.category}</span>
+                          <div className="flex gap-3">
+                            <span className="text-gray-500">{c.count} students</span>
+                            <span className="text-indigo-400 font-bold">Avg: {c.average_score}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Leaderboard Table Card */}
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg print-card">
+                  <div className="no-print flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Rankings Leaderboard</h3>
+                      <p className="text-gray-500 text-xs mt-0.5">{totalItems} results found</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleExportCSV}
+                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <FaDownload className="text-[10px]" /> Export CSV/Excel
+                      </button>
+                      <button
+                        onClick={triggerPDFPrint}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <FaFilePdf className="text-[10px]" /> Print branded PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left print-table">
+                      <thead>
+                        <tr className="border-b border-gray-800 text-gray-400 font-medium">
+                          <th className="py-3 px-3">Rank</th>
+                          <th className="py-3 px-3">Candidate Name</th>
+                          <th className="py-3 px-3">Roll Number</th>
+                          <th className="py-3 px-3">Category</th>
+                          <th className="py-3 px-3">Shift Details</th>
+                          <th className="py-3 px-3 text-right">Score</th>
+                          <th className="py-3 px-3 text-right">Percentile</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {candidates.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="py-10 text-center text-gray-500">
+                              No candidate data found matching the selected filters.
+                            </td>
+                          </tr>
+                        ) : (
+                          candidates.map((cand, idx) => (
+                            <tr key={idx} className="border-b border-gray-800/60 hover:bg-gray-800/10 text-gray-300">
+                              <td className="py-2.5 px-3 font-semibold text-indigo-400">#{cand.rank}</td>
+                              <td className="py-2.5 px-3 font-medium text-white">{cand.candidate_name}</td>
+                              <td className="py-2.5 px-3 font-mono text-gray-500">{cand.roll_number}</td>
+                              <td className="py-2.5 px-3">
+                                <span className="px-2 py-0.5 rounded bg-gray-800/80 text-gray-300 text-[10px] uppercase font-bold">
+                                  {cand.category}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <p className="font-semibold text-[10px] text-gray-400 truncate max-w-[120px]">{cand.subject || '—'}</p>
+                                <p className="text-[10px] text-gray-600">{cand.test_date} · {cand.test_time}</p>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-bold text-white">{cand.score}</td>
+                              <td className="py-2.5 px-3 text-right text-gray-400">{cand.percentile}%</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="no-print mt-5 flex justify-center gap-2">
+                      <button
+                        onClick={() => fetchAnalysis(Math.max(1, page - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
+                      >
+                        ‹
+                      </button>
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+                        <button
+                          key={p}
+                          onClick={() => fetchAnalysis(p)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${page === p ? 'bg-indigo-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => fetchAnalysis(Math.min(totalPages, page + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">📦 Pack Question Export</h3>
+                      <p className="text-xs text-gray-500">Choose the exam and question filters, then preview or export.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => fetchPackQuestions(1)}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={handleExportPackQuestions}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Target Exam</label>
+                      <select
+                        value={questionFilters.exam_id}
+                        onChange={(e) => setQuestionFilters({ ...questionFilters, exam_id: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{examsList.length > 1 ? 'Choose exam' : 'All Exams'}</option>
+                        {examsList.map((e) => (
+                          <option key={e.id} value={e.id}>{e.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Shift Subject</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. English"
+                          value={questionFilters.subject}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, subject: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Shift Date</label>
+                        <input
+                          type="date"
+                          value={questionFilters.shift_date}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, shift_date: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Shift Time</label>
+                        <input
+                          type="time"
+                          value={questionFilters.shift_time}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, shift_time: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Chapter</label>
+                        <input
+                          type="text"
+                          placeholder="Chapter name"
+                          value={questionFilters.chapter}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, chapter: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Difficulty</label>
+                        <select
+                          value={questionFilters.difficulty}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, difficulty: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Any</option>
+                          <option value="Easy">Easy</option>
+                          <option value="Medium">Medium</option>
+                          <option value="Hard">Hard</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Question Type</label>
+                        <select
+                          value={questionFilters.question_type}
+                          onChange={(e) => setQuestionFilters({ ...questionFilters, question_type: e.target.value })}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="">Any</option>
+                          <option value="MCQ">MCQ</option>
+                          <option value="Fill in the blank">Fill in the blank</option>
+                          <option value="True/False">True/False</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Search Question</label>
+                      <input
+                        type="text"
+                        placeholder="Keyword in question"
+                        value={questionFilters.search}
+                        onChange={(e) => setQuestionFilters({ ...questionFilters, search: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg print-card">
+                  <div className="no-print flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Question Preview</h3>
+                      <p className="text-xs text-gray-500">Showing up to 100 questions per page with pagination.</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => fetchPackQuestions(1)}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold"
+                      >
+                        Refresh
+                      </button>
+                      <button
+                        onClick={handleExportPackQuestions}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold"
+                      >
+                        Export CSV
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left print-table">
+                      <thead>
+                        <tr className="border-b border-gray-800 text-gray-400 font-medium">
+                          <th className="py-3 px-3">ID</th>
+                          <th className="py-3 px-3">Question</th>
+                          <th className="py-3 px-3">Subject</th>
+                          <th className="py-3 px-3">Chapter</th>
+                          <th className="py-3 px-3">Difficulty</th>
+                          <th className="py-3 px-3">Type</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {packQuestionsLoading ? (
+                          <tr>
+                            <td colSpan="6" className="py-10 text-center text-gray-400">Loading questions...</td>
+                          </tr>
+                        ) : packQuestionsPreview.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="py-10 text-center text-gray-500">Preview pack questions after applying filters.</td>
+                          </tr>
+                        ) : (
+                          packQuestionsPreview.map((q) => (
+                            <tr key={q.id} className="border-b border-gray-800/60 hover:bg-gray-800/10 text-gray-300">
+                              <td className="py-2.5 px-3 font-semibold text-indigo-400">{q.id}</td>
+                              <td className="py-2.5 px-3 text-sm text-white max-w-xl truncate">{q.question_text}</td>
+                              <td className="py-2.5 px-3 text-gray-300">{q.subject || '—'}</td>
+                              <td className="py-2.5 px-3 text-gray-300">{q.chapter || '—'}</td>
+                              <td className="py-2.5 px-3 text-gray-300">{q.difficulty || '—'}</td>
+                              <td className="py-2.5 px-3 text-gray-300">{q.question_type || '—'}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {packQuestionsPages > 1 && (
+                    <div className="no-print mt-5 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[11px] text-gray-400">Page {packQuestionsPage} of {packQuestionsPages}, {packQuestionsTotal} questions total</div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => fetchPackQuestions(Math.max(1, packQuestionsPage - 1))}
+                          disabled={packQuestionsPage <= 1}
+                          className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
+                        >
+                          ‹ Prev
+                        </button>
+                        {Array.from({ length: Math.min(packQuestionsPages, 5) }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => fetchPackQuestions(p)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${packQuestionsPage === p ? 'bg-indigo-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'}`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => fetchPackQuestions(Math.min(packQuestionsPages, packQuestionsPage + 1))}
+                          disabled={packQuestionsPage >= packQuestionsPages}
+                          className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm"
+                        >
+                          Next ›
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
 

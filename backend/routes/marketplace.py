@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
-from db.models import db, MasterQuestion, Exam, AISolution, ExamPurchase, UserPoints, PointsTransaction, QuestionPack, QuestionResponse, ExamResult, QuestionPackPurchase
+from db.models import db, MasterQuestion, Exam, AISolution, ExamPurchase, UserPoints, PointsTransaction, QuestionPack, QuestionResponse, ExamResult, QuestionPackPurchase, PointsPack
 from routes.auth import get_current_user
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_
 from services.marketplace_service import purchase_question_pack
 import traceback
 
@@ -55,12 +55,45 @@ def list_marketplace_packs():
         current_user = get_current_user()
         packs = QuestionPack.query.filter_by(is_active=True).order_by(desc(QuestionPack.created_at)).all()
         result = []
+        seen_ids = set()
         for pack in packs:
+            if pack.id in seen_ids:
+                continue
+            seen_ids.add(pack.id)
             purchased = False
             if current_user:
                 purchased = QuestionPackPurchase.query.filter_by(
                     user_id=current_user.id, pack_id=pack.id
                 ).first() is not None
+
+            raw_exam_ids = pack.exam_ids or []
+            exam_ids = []
+            for item in raw_exam_ids:
+                if isinstance(item, dict):
+                    exam_ids.append(item.get('exam_id'))
+                else:
+                    exam_ids.append(item)
+            exam_ids = [int(x) for x in exam_ids if x is not None]
+
+            student_count = 0
+            question_count = 0
+            set_count = 0
+            if exam_ids:
+                student_count = ExamResult.query.filter(ExamResult.exam_id.in_(exam_ids)).count()
+
+                question_count = db.session.query(func.count(func.distinct(QuestionResponse.question_no))).join(
+                    ExamResult, QuestionResponse.result_id == ExamResult.id
+                ).filter(
+                    ExamResult.exam_id.in_(exam_ids)
+                ).scalar() or 0
+
+                set_count = db.session.query(
+                    ExamResult.test_date,
+                    ExamResult.test_time
+                ).filter(
+                    ExamResult.exam_id.in_(exam_ids)
+                ).distinct().count()
+
             result.append({
                 'id': pack.id,
                 'name': pack.name,
@@ -68,6 +101,9 @@ def list_marketplace_packs():
                 'price': pack.price or 0,
                 'exam_ids': pack.exam_ids or [],
                 'purchased': purchased,
+                'student_count': student_count,
+                'question_count': question_count,
+                'set_count': set_count,
             })
         return jsonify({'packs': result})
     except Exception as e:
@@ -247,21 +283,173 @@ def exam_questions(exam_id):
         }
 
         if export_mode == 'csv':
-            csv_lines = ['id,question_text,subject,date,time,correct_answer']
+            csv_lines = ['id,question_text,subject,chapter,difficulty,question_type,exam_name,date,time,correct_answer,correct_option_text,option_a_text,option_b_text,option_c_text,option_d_text']
             for q in questions:
                 shift_info = q.get('shift_info') or {}
                 csv_lines.append(','.join([
                     str(q['id']),
                     '"' + (q['question_text'] or '').replace('"', '""') + '"',
-                    '"' + (shift_info.get('subject') or '').replace('"', '""') + '"',
+                    '"' + (q.get('subject') or '').replace('"', '""') + '"',
+                    '"' + (q.get('chapter') or '').replace('"', '""') + '"',
+                    '"' + (q.get('difficulty') or '').replace('"', '""') + '"',
+                    '"' + (q.get('question_type') or '').replace('"', '""') + '"',
+                    '"' + (q.get('exam_name') or '').replace('"', '""') + '"',
                     '"' + (shift_info.get('test_date') or '').replace('"', '""') + '"',
                     '"' + (shift_info.get('test_time') or '').replace('"', '""') + '"',
-                    str(q['correct_answer'] or ''),
+                    '"' + str(q.get('correct_answer') or '').replace('"', '""') + '"',
+                    '"' + str(q.get('correct_option_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_a_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_b_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_c_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_d_text') or '').replace('"', '""') + '"',
                 ]))
-            from flask import Response
-            return Response('\n'.join(csv_lines), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=questions.csv'})
+            return current_app.response_class('\n'.join(csv_lines), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=pack_questions_export.csv'})
 
         return jsonify(response_payload)
+    except Exception as e:
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@marketplace_bp.route('/packs/<int:pack_id>/questions', methods=['GET'])
+def pack_questions(pack_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({'error': 'Please login first'}), 401
+
+        purchase = QuestionPackPurchase.query.filter_by(user_id=current_user.id, pack_id=pack_id).first()
+        if not purchase:
+            return jsonify({'error': 'Access denied. You have not purchased this pack.'}), 403
+
+        pack = QuestionPack.query.get_or_404(pack_id)
+        raw_exam_ids = pack.exam_ids or []
+        exam_ids = []
+        for item in raw_exam_ids:
+            if isinstance(item, dict):
+                if item.get('include_questions', True):
+                    exam_ids.append(item.get('exam_id'))
+            else:
+                exam_ids.append(item)
+
+        exam_ids = [int(x) for x in exam_ids if x is not None]
+        if not exam_ids:
+            return jsonify({'questions': [], 'total': 0, 'page': 1, 'pages': 1})
+
+        exams = Exam.query.filter(Exam.id.in_(exam_ids)).all()
+        exam_map = {e.id: e.name for e in exams}
+
+        query = MasterQuestion.query
+        search = request.args.get('search', '').strip()
+        if search:
+            pattern = f'%{search}%'
+            query = query.filter(
+                or_(
+                    MasterQuestion.question_text.ilike(pattern),
+                    MasterQuestion.question_text_hin.ilike(pattern),
+                    MasterQuestion.question_text_eng.ilike(pattern),
+                    MasterQuestion.subject.ilike(pattern),
+                    MasterQuestion.chapter.ilike(pattern),
+                )
+            )
+
+        if request.args.get('subject', '').strip():
+            query = query.filter(MasterQuestion.subject.ilike(f"%{request.args.get('subject').strip()}%"))
+        if request.args.get('chapter', '').strip():
+            query = query.filter(MasterQuestion.chapter.ilike(f"%{request.args.get('chapter').strip()}%"))
+        if request.args.get('difficulty', '').strip():
+            query = query.filter(MasterQuestion.difficulty.ilike(f"%{request.args.get('difficulty').strip()}%"))
+        if request.args.get('question_type', '').strip():
+            query = query.filter(MasterQuestion.question_type.ilike(f"%{request.args.get('question_type').strip()}%"))
+
+        all_mqs = query.all()
+        matched_items = []
+        filter_exam_id = request.args.get('exam_id', type=int)
+        filter_date = request.args.get('shift_date', '').strip()
+        filter_time = request.args.get('shift_time', '').strip()
+        filter_shift_subject = request.args.get('shift_subject', '').strip()
+
+        for mq in all_mqs:
+            matched_shifts = []
+            for s in (mq.shifts or []):
+                if not s:
+                    continue
+                if str(s.get('exam_id')) not in [str(x) for x in exam_ids]:
+                    continue
+                if filter_exam_id and str(s.get('exam_id')) != str(filter_exam_id):
+                    continue
+                if filter_date and s.get('test_date') != filter_date:
+                    continue
+                if filter_time and s.get('test_time') != filter_time:
+                    continue
+                if filter_shift_subject and str(s.get('subject') or '').strip().lower() != filter_shift_subject.lower():
+                    continue
+                matched_shifts.append(s)
+
+            if matched_shifts:
+                matched_items.append((mq, matched_shifts))
+
+        matched_items.sort(key=lambda item: item[0].id)
+        total = len(matched_items)
+        download = request.args.get('export', '').strip().lower() == 'csv'
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        start = (page - 1) * per_page
+        page_items = matched_items if download else matched_items[start:start + per_page]
+
+        questions = []
+        for mq, shifts in page_items:
+            shift_info = shifts[0] if shifts else {}
+            questions.append({
+                'id': mq.id,
+                'question_text': mq.question_text,
+                'subject': mq.subject,
+                'chapter': mq.chapter,
+                'difficulty': mq.difficulty,
+                'question_type': mq.question_type,
+                'correct_answer': mq.correct_answer,
+                'correct_option_text': mq.correct_option_text,
+                'option_a_text': mq.option_a_text,
+                'option_b_text': mq.option_b_text,
+                'option_c_text': mq.option_c_text,
+                'option_d_text': mq.option_d_text,
+                'reference_count': mq.reference_count,
+                'shift_info': shift_info,
+                'exam_id': shift_info.get('exam_id'),
+                'exam_name': exam_map.get(int(shift_info.get('exam_id'))) if shift_info.get('exam_id') else None,
+            })
+
+        if download:
+            csv_lines = ['id,question_text,subject,chapter,difficulty,question_type,exam_name,date,time,correct_answer,correct_option_text,option_a_text,option_b_text,option_c_text,option_d_text']
+            for q in questions:
+                shift_info = q.get('shift_info') or {}
+                csv_lines.append(','.join([
+                    str(q['id']),
+                    '"' + (q['question_text'] or '').replace('"', '""') + '"',
+                    '"' + (q.get('subject') or '').replace('"', '""') + '"',
+                    '"' + (q.get('chapter') or '').replace('"', '""') + '"',
+                    '"' + (q.get('difficulty') or '').replace('"', '""') + '"',
+                    '"' + (q.get('question_type') or '').replace('"', '""') + '"',
+                    '"' + (q.get('exam_name') or '').replace('"', '""') + '"',
+                    '"' + (shift_info.get('test_date') or '').replace('"', '""') + '"',
+                    '"' + (shift_info.get('test_time') or '').replace('"', '""') + '"',
+                    '"' + str(q.get('correct_answer') or '').replace('"', '""') + '"',
+                    '"' + str(q.get('correct_option_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_a_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_b_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_c_text') or '').replace('"', '""') + '"',
+                    '"' + (q.get('option_d_text') or '').replace('"', '""') + '"',
+                ]))
+            return current_app.response_class('\n'.join(csv_lines), mimetype='text/csv', headers={'Content-Disposition': 'attachment; filename=pack_questions_export.csv'})
+
+        return jsonify({
+            'questions': questions,
+            'total': total,
+            'page': page,
+            'pages': (total + per_page - 1) // per_page,
+            'per_page': per_page,
+            'pack_name': pack.name,
+        })
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
@@ -691,5 +879,62 @@ def pack_marks_analysis(pack_id):
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
+# ── Points Packs in Marketplace ────────────────────────────────────────────────
+
+@marketplace_bp.route('/points-packs', methods=['GET'])
+def list_active_points_packs():
+    try:
+        packs = PointsPack.query.filter_by(is_active=True).order_by(desc(PointsPack.points)).all()
+        return jsonify({'packs': [p.to_dict() for p in packs]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@marketplace_bp.route('/points-packs/purchase', methods=['POST'])
+def purchase_points_pack():
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({'error': 'Please login first'}), 401
+
+        data = request.get_json() or {}
+        pack_id = data.get('pack_id')
+        if not pack_id:
+            return jsonify({'error': 'pack_id required'}), 400
+
+        pack = PointsPack.query.filter_by(id=pack_id, is_active=True).first_or_404()
+
+        # Update or create user wallet
+        wallet = UserPoints.query.filter_by(user_id=current_user.id).first()
+        if not wallet:
+            wallet = UserPoints(user_id=current_user.id, balance=0, total_earned=0, total_spent=0)
+            db.session.add(wallet)
+
+        wallet.balance += pack.points
+        wallet.total_earned += pack.points
+
+        # Record Points transaction
+        txn = PointsTransaction(
+            user_id=current_user.id,
+            type='recharge',
+            amount=pack.points,
+            description=f'Recharged: {pack.name} ({pack.points} Points)',
+            reference_id=pack.id
+        )
+        db.session.add(txn)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'✅ Successfully purchased {pack.name}! {pack.points} points added.',
+            'new_balance': wallet.balance
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
 
 

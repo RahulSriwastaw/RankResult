@@ -192,7 +192,17 @@ const breadcrumbSchema = {
 
 export default function Home() {
   const [liveCount, setLiveCount] = useState(0);
+  const [user, setUser] = useState(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const u = localStorage.getItem('rv_user');
+      if (u) {
+        try { setUser(JSON.parse(u)); } catch {}
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -278,9 +288,23 @@ export default function Home() {
               <Link href="/marketplace" className="hidden sm:flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition">
                 <FaBookOpen className="text-xs" /> Question Bank
               </Link>
-              <Link href="/login" className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition">
-                <FaUser className="text-xs" /> Login
-              </Link>
+              {user ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-gray-300 font-medium hidden sm:inline">Hello, {user.name}</span>
+                  <button onClick={() => {
+                    localStorage.removeItem('rv_token');
+                    localStorage.removeItem('rv_user');
+                    setUser(null);
+                    router.push('/');
+                  }} className="text-red-400 hover:text-red-300 transition font-medium">
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link href="/login" className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition">
+                  <FaUser className="text-xs" /> Login
+                </Link>
+              )}
             </div>
           </div>
         </nav>
@@ -444,7 +468,7 @@ export default function Home() {
         {/* FOOTER */}
         <footer className="border-t border-gray-800 py-8 px-4 mt-4">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-6">
               <div>
                 <div className="text-lg font-black gradient-text mb-2">⚡ RankVeda</div>
                 <p className="text-xs text-gray-600 leading-relaxed">India's free platform for government exam answer key calculation, rank prediction and score card download.</p>
@@ -466,6 +490,18 @@ export default function Home() {
                   <li><Link href="/exams" className="hover:text-gray-400 transition">All Exams</Link></li>
                   <li><Link href="/marketplace" className="hover:text-gray-400 transition">Question Bank</Link></li>
                   <li><Link href="/login" className="hover:text-gray-400 transition">Login</Link></li>
+                </ul>
+              </div>
+              <div>
+                <div className="font-bold text-gray-400 text-sm mb-2">Legal</div>
+                <ul className="space-y-1 text-xs text-gray-600">
+                  <li><Link href="/privacy" className="hover:text-gray-400 transition">Privacy Policy</Link></li>
+                  <li><Link href="/terms" className="hover:text-gray-400 transition">Terms of Service</Link></li>
+                  <li><Link href="/disclaimer" className="hover:text-gray-400 transition">Disclaimer</Link></li>
+                  <li><Link href="/cookie-policy" className="hover:text-gray-400 transition">Cookie Policy</Link></li>
+                  <li><Link href="/refund-policy" className="hover:text-gray-400 transition">Refund Policy</Link></li>
+                  <li><Link href="/dmca" className="hover:text-gray-400 transition">DMCA / Copyright</Link></li>
+                  <li><Link href="/contact" className="hover:text-gray-400 transition">Contact Us</Link></li>
                 </ul>
               </div>
             </div>

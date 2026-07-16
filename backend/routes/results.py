@@ -4,6 +4,8 @@ from services.scraper import fetch_html, parse_result_html
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 import uuid
+from flask import render_template, make_response
+import pdfkit
 
 results_bp = Blueprint('results', __name__, url_prefix='/api/results')
 
@@ -11,6 +13,14 @@ results_bp = Blueprint('results', __name__, url_prefix='/api/results')
 @results_bp.route('', methods=['POST'])
 @results_bp.route('/', methods=['POST'])
 def get_result_from_url():
+    from routes.auth import get_current_user
+    current_user = get_current_user()
+    unlocked_mq_ids = set()
+    if current_user:
+        from db.models import UserUnlockedQuestion
+        unlocked = UserUnlockedQuestion.query.filter_by(user_id=current_user.id).all()
+        unlocked_mq_ids = {u.master_question_id for u in unlocked}
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'JSON body required'}), 400
@@ -90,7 +100,7 @@ def get_result_from_url():
                 print(f"[API] Returning cached result with {len(questions)} questions")
                 return jsonify({
                     'result': existing_result.to_dict(),
-                    'questions': [q.to_dict() for q in questions]
+                    'questions': [q.to_dict(unlocked_mq_ids) for q in questions]
                 })
         # Questions missing — fall through to re-parse and insert
         print(f"[API] Cached result has 0 questions — will re-parse and insert questions")
@@ -270,8 +280,164 @@ def get_result_from_url():
 
     return jsonify({
         'result': new_result.to_dict(),
-        'questions': [q.to_dict() for q in questions]
+        'questions': [q.to_dict(unlocked_mq_ids) for q in questions]
     })
+
+
+# ── PDF Export (server-rendered HTML -> PDF) ─────────────────────────────────
+@results_bp.route('/<int:result_id>/pdf', methods=['GET'])
+def download_result_pdf(result_id):
+    from db.models import ExamResult, QuestionResponse
+    res = ExamResult.query.get_or_404(result_id)
+    questions = QuestionResponse.query.filter_by(result_id=res.id).order_by(QuestionResponse.question_no).all()
+
+    # Build data structures similar to frontend `MarksheetCard` props
+    candidate = {
+        'name': res.candidate_name,
+        'registration_no': res.registration_number,
+        'roll_number': res.roll_number,
+        'community': res.community,
+        'test_centre_name': res.test_centre_name,
+        'test_date': res.test_date,
+        'test_time': res.test_time,
+        'exam_name': res.exam.name if getattr(res, 'exam', None) else '',
+        'subject': res.subject,
+    }
+
+    # sections: prefer section_wise mapping -> convert to list of simple objects
+    sections = []
+    sw = res.section_wise or {}
+    if isinstance(sw, dict):
+        for k, v in sw.items():
+            sections.append({ 'name': k, 'total': None, 'na': None, 'right': None, 'wrong': None, 'marks': float(v) if v is not None else None })
+    elif isinstance(sw, list):
+        for s in sw:
+            # if list of dicts
+            if isinstance(s, dict):
+                sections.append({ 'name': s.get('name') or s.get('section') or 'Section', 'total': s.get('total'), 'na': s.get('na'), 'right': s.get('right') or s.get('correct'), 'wrong': s.get('wrong'), 'marks': float(s.get('marks')) if s.get('marks') is not None else None })
+            else:
+                sections.append({ 'name': str(s), 'total': None, 'na': None, 'right': None, 'wrong': None, 'marks': None })
+
+    score = {
+        'total_marks': float(res.score) if res.score is not None else None,
+        'correct': res.total_correct or 0,
+        'wrong': res.total_wrong or 0,
+        'unattempted': res.total_unattempted or 0,
+        'max_marks': None,
+        'sections': sections,
+    }
+
+    rank = {
+        'rank': res.rank,
+        'total_appeared': None,
+        'percentile': float(res.percentile) if res.percentile is not None else None,
+    }
+
+    # Render a printable template matching MarksheetCard layout
+    html = render_template('marksheet_pdf.html', candidate=candidate, score=score, rank=rank)
+
+    # pdfkit requires wkhtmltopdf binary available on the system PATH
+    options = {
+        'encoding': 'UTF-8',
+        'page-size': 'A4',
+        'margin-top': '10mm',
+        'margin-bottom': '10mm',
+        'margin-left': '10mm',
+        'margin-right': '10mm',
+        'enable-local-file-access': None,
+    }
+    try:
+        # Configure wkhtmltopdf binary path if provided via env or common Windows install location
+        import os
+        wkpath = os.environ.get('WKHTMLTOPDF_PATH')
+        if not wkpath and os.name == 'nt':
+            # Common installation path on Windows
+            possible = [
+                r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe",
+                r"C:\Program Files (x86)\wkhtmltopdf\bin\wkhtmltopdf.exe"
+            ]
+            for p in possible:
+                if os.path.exists(p):
+                    wkpath = p
+                    break
+        if wkpath:
+            config = pdfkit.configuration(wkhtmltopdf=wkpath)
+            pdf = pdfkit.from_string(html, False, options=options, configuration=config)
+        else:
+            pdf = pdfkit.from_string(html, False, options=options)
+    except Exception as e:
+        print(f"[PDF] generation failed: {e}")
+        # Try WeasyPrint fallback (produces selectable text PDF)
+        try:
+            from weasyprint import HTML, CSS
+            print('[PDF] Falling back to WeasyPrint')
+            pdf = HTML(string=html).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 10mm; }')])
+        except Exception as e2:
+            print(f"[PDF] WeasyPrint fallback failed: {e2}")
+            # Try headless Chromium via pyppeteer as a robust fallback
+            try:
+                import asyncio
+                from pyppeteer import launch
+
+                async def _pdf_from_html_pypp(html_str):
+                    browser = await launch(args=['--no-sandbox'])
+                    page = await browser.newPage()
+                    await page.setContent(html_str, waitUntil='networkidle0')
+                    pdf_bytes = await page.pdf({'format': 'A4', 'printBackground': True,
+                                                'margin': {'top': '10mm', 'bottom': '10mm', 'left': '10mm', 'right': '10mm'}})
+                    await browser.close()
+                    return pdf_bytes
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                pdf = loop.run_until_complete(_pdf_from_html_pypp(html))
+                try:
+                    loop.close()
+                except Exception:
+                    pass
+            except Exception as e3:
+                print(f"[PDF] pyppeteer fallback failed: {e3}")
+                pyppeteer_error = str(e3)
+
+            # As a final attempt, try headless Chrome/Chromium CLI (print-to-pdf)
+            try:
+                import tempfile, os, subprocess
+                chrome_candidates = [
+                    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                    r"C:\Program Files\Chromium\Application\chrome.exe",
+                ]
+                chrome_bin = None
+                for p in chrome_candidates:
+                    if os.path.exists(p):
+                        chrome_bin = p
+                        break
+                if not chrome_bin:
+                    raise RuntimeError('No Chrome/Chromium binary found')
+
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    html_file = os.path.join(tmpdir, 'page.html')
+                    pdf_file = os.path.join(tmpdir, 'out.pdf')
+                    with open(html_file, 'w', encoding='utf-8') as fh:
+                        fh.write(html)
+                    cmd = [chrome_bin, '--headless', '--disable-gpu', f'--print-to-pdf={pdf_file}', html_file]
+                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                    if proc.returncode != 0 or not os.path.exists(pdf_file):
+                        raise RuntimeError(f'Chrome PDF failed: rc={proc.returncode} stderr={proc.stderr.decode(errors="ignore")}')
+                    with open(pdf_file, 'rb') as fh:
+                        pdf = fh.read()
+            except Exception as e4:
+                print(f"[PDF] Chrome CLI fallback failed: {e4}")
+                from flask import current_app
+                if current_app.debug:
+                    return jsonify({'error': 'PDF generation failed on server (all renderers failed)', 'detail': str(e4)}), 500
+                return jsonify({'error': 'PDF generation failed on server (all renderers failed)'}), 500
+
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    filename = f"RankVeda_Scorecard_{res.roll_number or res.id}.pdf"
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 # ── Live Rank Endpoint ────────────────────────────────────────────────────────

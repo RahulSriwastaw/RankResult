@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db.models import db, User, Exam, ExamResult, QuestionResponse, AISolution, UserPoints, PointsTransaction, MasterQuestion, QuestionPack
+from db.models import db, User, Exam, ExamResult, QuestionResponse, AISolution, UserPoints, PointsTransaction, MasterQuestion, QuestionPack, QuestionPackPurchase, PointsPack
 from sqlalchemy import func, desc, or_
 from datetime import datetime, timedelta, timezone
 from services.ai_service import ai_edit_question, bulk_ai_edit_questions
@@ -108,6 +108,10 @@ def _hash_password(password: str) -> str:
 def admin_create_user():
     """Create a new user from admin panel."""
     try:
+        import requests
+        import os
+        import hashlib
+        
         data = request.get_json() or {}
         email = (data.get('email') or '').strip().lower()
         name = (data.get('name') or '').strip()
@@ -117,9 +121,29 @@ def admin_create_user():
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
 
+        # Check local DB
         existing = User.query.filter_by(email=email).first()
         if existing:
-            return jsonify({'error': 'Email already registered'}), 409
+            return jsonify({'error': 'Email already registered locally'}), 409
+
+        # Create user in Firebase Auth using REST API
+        api_key = os.getenv('FIREBASE_API_KEY', 'AIzaSyDybByBZ7_BEHGaax6KKiKeS8BAT1ObR00')
+        signup_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={api_key}"
+        resp = requests.post(signup_url, json={'email': email, 'password': password, 'returnSecureToken': True}, timeout=10)
+        
+        if resp.status_code != 200:
+            err_data = resp.json()
+            err_msg = err_data.get('error', {}).get('message', 'Firebase signup failed')
+            if err_msg == 'OPERATION_NOT_ALLOWED':
+                return jsonify({
+                    'error': "Firebase Email/Password provider is disabled. "
+                             "Please enable 'Email/Password' in your Firebase Console under Authentication -> Sign-in method."
+                }), 400
+            elif err_msg == 'EMAIL_EXISTS':
+                return jsonify({'error': 'This email is already registered in Firebase.'}), 409
+            elif err_msg == 'WEAK_PASSWORD : Password should be at least 6 characters':
+                return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+            return jsonify({'error': f"Firebase error: {err_msg}"}), 400
 
         user = User(email=email, name=name or email.split('@')[0], password_hash=_hash_password(password))
         db.session.add(user)
@@ -201,6 +225,7 @@ def get_user(user_id):
         transactions = PointsTransaction.query.filter_by(user_id=user_id).order_by(desc(PointsTransaction.created_at)).limit(50).all()
         results = ExamResult.query.filter_by(user_id=user_id).order_by(desc(ExamResult.created_at)).limit(20).all()
 
+        packs = QuestionPackPurchase.query.filter_by(user_id=user_id).all()
         return jsonify({
             'user': {
                 'id': u.id,
@@ -213,6 +238,7 @@ def get_user(user_id):
                 'total_earned': points.total_earned if points else 0,
                 'total_spent': points.total_spent if points else 0
             },
+            'packs': [p.pack_id for p in packs],
             'transactions': [{
                 'id': t.id,
                 'type': t.type,
@@ -271,6 +297,48 @@ def adjust_user_points(user_id):
         db.session.commit()
 
         return jsonify({'success': True, 'new_balance': up.balance})
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/users/<int:user_id>/packs', methods=['POST'])
+def update_user_packs(user_id):
+    """Assign or update user access to question packs."""
+    try:
+        data = request.get_json() or {}
+        pack_ids = data.get('pack_ids', [])
+        replace = data.get('replace', True)
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        try:
+            pack_ids = [int(pid) for pid in pack_ids if pid is not None]
+        except Exception:
+            return jsonify({'error': 'Invalid pack IDs supplied'}), 400
+
+        existing_purchases = QuestionPackPurchase.query.filter_by(user_id=user_id).all()
+        existing_ids = {purchase.pack_id for purchase in existing_purchases}
+
+        valid_packs = QuestionPack.query.filter(QuestionPack.id.in_(pack_ids)).all()
+        valid_ids = {pack.id for pack in valid_packs}
+
+        # Remove access for packs not in the new list when replacing assignments
+        if replace:
+            remove_ids = existing_ids - valid_ids
+            if remove_ids:
+                QuestionPackPurchase.query.filter_by(user_id=user_id).filter(QuestionPackPurchase.pack_id.in_(remove_ids)).delete(synchronize_session=False)
+
+        # Add new pack accesses
+        for pack_id in valid_ids:
+            if pack_id not in existing_ids:
+                db.session.add(QuestionPackPurchase(user_id=user_id, pack_id=pack_id))
+
+        db.session.commit()
+        return jsonify({'success': True, 'pack_ids': list(valid_ids)})
     except Exception as e:
         db.session.rollback()
         print(traceback.format_exc())
@@ -775,16 +843,32 @@ def list_master_questions():
                 'question_id_html': mq.question_id_html,
                 'question_hash': mq.question_hash,
                 'question_text': mq.question_text,
+                'question_text_hin': mq.question_text_hin,
+                'question_text_eng': mq.question_text_eng,
+                'subject': mq.subject,
+                'chapter': mq.chapter,
+                'question_type': mq.question_type,
+                'difficulty': mq.difficulty,
                 'correct_answer': mq.correct_answer,
                 'correct_option_text': mq.correct_option_text,
                 'option_a_text': mq.option_a_text,
+                'option_a_hin': mq.option_a_hin,
+                'option_a_eng': mq.option_a_eng,
                 'option_b_text': mq.option_b_text,
+                'option_b_hin': mq.option_b_hin,
+                'option_b_eng': mq.option_b_eng,
                 'option_c_text': mq.option_c_text,
+                'option_c_hin': mq.option_c_hin,
+                'option_c_eng': mq.option_c_eng,
                 'option_d_text': mq.option_d_text,
+                'option_d_hin': mq.option_d_hin,
+                'option_d_eng': mq.option_d_eng,
                 'option_a_id': mq.option_a_id,
                 'option_b_id': mq.option_b_id,
                 'option_c_id': mq.option_c_id,
                 'option_d_id': mq.option_d_id,
+                'solution_hin': mq.solution_hin,
+                'solution_eng': mq.solution_eng,
                 'reference_count': mq.reference_count,
                 'shift_count': mq.shift_count,
                 'shifts': shifts,
@@ -834,13 +918,29 @@ def get_master_question(mq_id):
             'question_id_html': mq.question_id_html,
             'question_hash': mq.question_hash,
             'question_text': mq.question_text,
+            'question_text_hin': mq.question_text_hin,
+            'question_text_eng': mq.question_text_eng,
+            'subject': mq.subject,
+            'chapter': mq.chapter,
+            'question_type': mq.question_type,
+            'difficulty': mq.difficulty,
             'correct_answer': mq.correct_answer,
             'correct_option_text': mq.correct_option_text,
             'parsed_payload': mq.parsed_payload or {},
             'option_a_text': mq.option_a_text,
+            'option_a_hin': mq.option_a_hin,
+            'option_a_eng': mq.option_a_eng,
             'option_b_text': mq.option_b_text,
+            'option_b_hin': mq.option_b_hin,
+            'option_b_eng': mq.option_b_eng,
             'option_c_text': mq.option_c_text,
+            'option_c_hin': mq.option_c_hin,
+            'option_c_eng': mq.option_c_eng,
             'option_d_text': mq.option_d_text,
+            'option_d_hin': mq.option_d_hin,
+            'option_d_eng': mq.option_d_eng,
+            'solution_hin': mq.solution_hin,
+            'solution_eng': mq.solution_eng,
             'reference_count': mq.reference_count,
             'shift_count': mq.shift_count,
             'shifts': mq.shifts or [],
@@ -869,20 +969,19 @@ def update_master_question(mq_id):
         if data.get('question_text'):
             mq.question_text = data['question_text']
             mq.question_hash = MasterQuestion.generate_hash(data['question_text'], mq.question_id_html)
-        if 'correct_answer' in data:
-            mq.correct_answer = data['correct_answer']
-        if 'correct_option_text' in data:
-            mq.correct_option_text = data['correct_option_text']
-        if 'question_id_html' in data:
-            mq.question_id_html = data['question_id_html']
-        if 'option_a_text' in data:
-            mq.option_a_text = data['option_a_text']
-        if 'option_b_text' in data:
-            mq.option_b_text = data['option_b_text']
-        if 'option_c_text' in data:
-            mq.option_c_text = data['option_c_text']
-        if 'option_d_text' in data:
-            mq.option_d_text = data['option_d_text']
+        # All editable fields
+        for field in [
+            'correct_answer', 'correct_option_text', 'question_id_html',
+            'question_text_hin', 'question_text_eng',
+            'subject', 'chapter', 'question_type', 'difficulty',
+            'option_a_text', 'option_a_hin', 'option_a_eng',
+            'option_b_text', 'option_b_hin', 'option_b_eng',
+            'option_c_text', 'option_c_hin', 'option_c_eng',
+            'option_d_text', 'option_d_hin', 'option_d_eng',
+            'solution_hin', 'solution_eng',
+        ]:
+            if field in data:
+                setattr(mq, field, data[field])
 
         db.session.commit()
         return jsonify({'success': True, 'id': mq.id})
@@ -1068,3 +1167,74 @@ def list_transactions():
     except Exception as e:
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+
+# ==================== POINTS PACKS ====================
+
+@admin_bp.route('/points-packs', methods=['GET'])
+def list_points_packs():
+    try:
+        packs = PointsPack.query.order_by(desc(PointsPack.created_at)).all()
+        return jsonify({'packs': [p.to_dict() for p in packs]})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/points-packs', methods=['POST'])
+def create_points_pack():
+    try:
+        data = request.get_json() or {}
+        name = data.get('name')
+        points = data.get('points')
+        price = data.get('price', 0.0)
+
+        if not name or not points:
+            return jsonify({'error': 'Name and points are required'}), 400
+
+        pack = PointsPack(
+            name=name,
+            points=int(points),
+            price=float(price),
+            is_active=data.get('is_active', True)
+        )
+        db.session.add(pack)
+        db.session.commit()
+        return jsonify({'success': True, 'pack': pack.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/points-packs/<int:pack_id>', methods=['PUT'])
+def update_points_pack(pack_id):
+    try:
+        pack = PointsPack.query.get_or_404(pack_id)
+        data = request.get_json() or {}
+
+        if 'name' in data:
+            pack.name = data['name']
+        if 'points' in data:
+            pack.points = int(data['points'])
+        if 'price' in data:
+            pack.price = float(data['price'])
+        if 'is_active' in data:
+            pack.is_active = bool(data['is_active'])
+
+        db.session.commit()
+        return jsonify({'success': True, 'pack': pack.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/points-packs/<int:pack_id>', methods=['DELETE'])
+def delete_points_pack(pack_id):
+    try:
+        pack = PointsPack.query.get_or_404(pack_id)
+        db.session.delete(pack)
+        db.session.commit()
+        return jsonify({'success': True, 'deleted_id': pack_id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+

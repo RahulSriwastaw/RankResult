@@ -209,3 +209,72 @@ def google_login():
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+
+@auth_bp.route('/firebase-login', methods=['POST'])
+def firebase_login():
+    try:
+        data = request.get_json() or {}
+        id_token = data.get('idToken')
+        name = data.get('name')
+        if not id_token:
+            return jsonify({'error': 'idToken is required'}), 400
+
+        # Verify using Google identity toolkit lookup API
+        api_key = os.getenv('FIREBASE_API_KEY', 'AIzaSyDybByBZ7_BEHGaax6KKiKeS8BAT1ObR00')
+        verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={api_key}"
+        resp = requests.post(verify_url, json={'idToken': id_token}, timeout=5)
+        if resp.status_code != 200:
+            return jsonify({'error': 'Invalid or expired Firebase ID token'}), 400
+
+        payload = resp.json()
+        users = payload.get('users', [])
+        if not users:
+            return jsonify({'error': 'User not found in Firebase payload'}), 400
+
+        user_info = users[0]
+        email = user_info.get('email')
+        display_name = user_info.get('displayName') or name or email.split('@')[0]
+
+        if not email:
+            return jsonify({'error': 'Email not resolved in Firebase token'}), 400
+
+        email = email.lower().strip()
+        user = User.query.filter_by(email=email).first()
+        is_new = False
+        if not user:
+            # Create user in SQLite
+            user = User(email=email, name=display_name)
+            db.session.add(user)
+            db.session.flush()
+
+            # Create wallet
+            wallet = UserPoints(user_id=user.id, balance=0, total_earned=0, total_spent=0)
+            db.session.add(wallet)
+            db.session.commit()
+            is_new = True
+        else:
+            # Sync name if display name is available
+            if display_name and not user.name:
+                user.name = display_name
+                db.session.commit()
+
+        wallet = UserPoints.query.filter_by(user_id=user.id).first()
+        token = _make_token(user.id, user.email)
+
+        return jsonify({
+            'success': True,
+            'token': token,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'name': user.name,
+                'balance': wallet.balance if wallet else 0
+            },
+            'is_new': is_new
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+

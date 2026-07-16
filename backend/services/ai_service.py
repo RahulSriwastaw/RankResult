@@ -54,28 +54,73 @@ def _extract_json_payload(text):
 
 # ─── Claude: Generate AI explanation for wrong answer ────────────────────────
 
-def generate_solution(question_no, correct_answer, student_answer, question_text=None, correct_option_text=None, student_option_text=None):
-    prompt = f"""
-    You are an expert exam coach. A student got a question wrong.
-    Question number: {question_no}
-    Correct answer: {correct_answer}
-    Student's answer: {student_answer or 'Did not attempt'}
-
-    Please provide:
-    1. A clear concept explanation.
-    2. Why the student's answer is wrong (if they attempted).
-    3. Key takeaways (3-4 bullet points).
-    4. A link to similar practice questions (if known).
-
-    Respond in JSON format with keys: explanation, why_wrong, key_takeaways (array), similar_questions_url.
+def generate_solution(question_no, correct_answer, student_answer, question_text=None,
+                      correct_option_text=None, student_option_text=None,
+                      option_a=None, option_b=None, option_c=None, option_d=None):
     """
+    Generate a full AI solution for a question.
+    Also enriches the question with bilingual text, subject, chapter, difficulty, etc.
+    Returns a dict with explanation, why_wrong, key_takeaways, similar_questions_url,
+    and metadata (subject, chapter, question_type, difficulty, question_text_hin,
+    question_text_eng, option_a_hin, option_a_eng, ..., solution_hin, solution_eng).
+    """
+    options_str = ""
+    if option_a: options_str += f"\nOption A: {option_a}"
+    if option_b: options_str += f"\nOption B: {option_b}"
+    if option_c: options_str += f"\nOption C: {option_c}"
+    if option_d: options_str += f"\nOption D: {option_d}"
+
+    prompt = f"""You are an expert exam coach for Indian competitive exams (SSC, RRB, Banking, UPSC, etc.).
+A student attempted the following question.
+
+Question No: {question_no}
+Question: {question_text or 'N/A'}{options_str}
+Correct Answer: {correct_answer} — {correct_option_text or ''}
+Student's Answer: {student_answer or 'Did not attempt'} — {student_option_text or ''}
+
+Your task is to:
+1. Provide a detailed explanation of the correct answer.
+2. Explain why the student's answer is wrong (if attempted).
+3. Give 3-4 key takeaways.
+4. Identify the subject (e.g. Mathematics, English, General Awareness, Reasoning, etc.)
+5. Identify the chapter/topic (e.g. Percentage, One Word Substitution, Polity, etc.)
+6. Identify the question type (e.g. MCQ, Fill in the Blank, Error Detection, etc.)
+7. Rate difficulty: Easy / Medium / Hard.
+8. Translate the question text into Hindi (question_text_hin).
+9. Provide a clean English version of the question text (question_text_eng).
+10. Translate each option into Hindi (option_a_hin, option_b_hin, etc.) and provide clean English (option_a_eng, etc.).
+11. Provide the full solution/explanation in Hindi (solution_hin).
+12. Provide the full solution/explanation in English (solution_eng).
+
+Return ONLY a valid JSON object with these exact keys:
+{{
+  "explanation": "...",
+  "why_wrong": "...",
+  "key_takeaways": ["...", "...", "..."],
+  "similar_questions_url": null,
+  "subject": "...",
+  "chapter": "...",
+  "question_type": "MCQ",
+  "difficulty": "Medium",
+  "question_text_hin": "...",
+  "question_text_eng": "...",
+  "option_a_hin": "...",
+  "option_a_eng": "...",
+  "option_b_hin": "...",
+  "option_b_eng": "...",
+  "option_c_hin": "...",
+  "option_c_eng": "...",
+  "option_d_hin": "...",
+  "option_d_eng": "...",
+  "solution_hin": "...",
+  "solution_eng": "..."
+}}"""
+
     gemini_api_key = os.getenv('GEMINI_API_KEY')
     if not gemini_api_key:
         print("Warning: GEMINI_API_KEY not found, using fallback explanation.")
         return _build_fallback_solution(
-            question_no,
-            correct_answer,
-            student_answer,
+            question_no, correct_answer, student_answer,
             question_text=question_text,
             correct_option_text=correct_option_text,
             student_option_text=student_option_text
@@ -91,7 +136,7 @@ def generate_solution(question_no, correct_answer, student_answer, question_text
         "generationConfig": {
             "response_mime_type": "application/json",
             "temperature": 0.2,
-            "maxOutputTokens": 1024
+            "maxOutputTokens": 2048
         }
     }
 
@@ -103,9 +148,7 @@ def generate_solution(question_no, correct_answer, student_answer, question_text
         parsed = _extract_json_payload(content)
         if parsed:
             fallback = _build_fallback_solution(
-                question_no,
-                correct_answer,
-                student_answer,
+                question_no, correct_answer, student_answer,
                 question_text=question_text,
                 correct_option_text=correct_option_text,
                 student_option_text=student_option_text
@@ -114,12 +157,27 @@ def generate_solution(question_no, correct_answer, student_answer, question_text
                 'explanation': parsed.get('explanation') or fallback['explanation'],
                 'why_wrong': parsed.get('why_wrong') or fallback['why_wrong'],
                 'key_takeaways': parsed.get('key_takeaways') or fallback['key_takeaways'],
-                'similar_questions_url': parsed.get('similar_questions_url')
+                'similar_questions_url': parsed.get('similar_questions_url'),
+                # New metadata fields
+                'subject': parsed.get('subject'),
+                'chapter': parsed.get('chapter'),
+                'question_type': parsed.get('question_type'),
+                'difficulty': parsed.get('difficulty'),
+                'question_text_hin': parsed.get('question_text_hin'),
+                'question_text_eng': parsed.get('question_text_eng'),
+                'option_a_hin': parsed.get('option_a_hin'),
+                'option_a_eng': parsed.get('option_a_eng'),
+                'option_b_hin': parsed.get('option_b_hin'),
+                'option_b_eng': parsed.get('option_b_eng'),
+                'option_c_hin': parsed.get('option_c_hin'),
+                'option_c_eng': parsed.get('option_c_eng'),
+                'option_d_hin': parsed.get('option_d_hin'),
+                'option_d_eng': parsed.get('option_d_eng'),
+                'solution_hin': parsed.get('solution_hin'),
+                'solution_eng': parsed.get('solution_eng'),
             }
         return _build_fallback_solution(
-            question_no,
-            correct_answer,
-            student_answer,
+            question_no, correct_answer, student_answer,
             question_text=question_text,
             correct_option_text=correct_option_text,
             student_option_text=student_option_text
@@ -129,13 +187,12 @@ def generate_solution(question_no, correct_answer, student_answer, question_text
         if 'response' in locals() and hasattr(response, 'text'):
             print('Response:', response.text)
         return _build_fallback_solution(
-            question_no,
-            correct_answer,
-            student_answer,
+            question_no, correct_answer, student_answer,
             question_text=question_text,
             correct_option_text=correct_option_text,
             student_option_text=student_option_text
         )
+
 
 
 # ─── Gemini: AI Edit a question ──────────────────────────────────────────────
