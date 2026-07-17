@@ -587,7 +587,7 @@ export default function ResultPage() {
                     </button>
                   </div>
                 </div>
-                <div className="w-full shadow-2xl ring-1 ring-slate-900/10 rounded-2xl overflow-hidden bg-[#0a0a1a]">
+                <div className="w-full shadow-2xl ring-1 ring-slate-200 rounded-2xl overflow-hidden bg-white">
                   <MarksheetCard ref={marksheetRef} candidate={candidateForCard} score={scoreForCard} rank={rankForCard} />
                 </div>
               </motion.div>
