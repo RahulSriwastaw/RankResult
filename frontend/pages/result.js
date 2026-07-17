@@ -563,15 +563,15 @@ export default function ResultPage() {
   const sectionBarData = {
     labels: sections.length > 0 ? sections.map(s => (s.name || '').split(' ').slice(0, 2).join(' ')) : ['Correct', 'Wrong', 'Skipped'],
     datasets: sections.length > 0 ? [
-      { label: 'Right', data: sections.map(s => s.right ?? 0), backgroundColor: '#22c55e', borderRadius: 4 },
-      { label: 'Wrong', data: sections.map(s => s.wrong ?? 0), backgroundColor: '#ef4444', borderRadius: 4 },
-      { label: 'NA', data: sections.map(s => s.na ?? 0), backgroundColor: '#6b7280', borderRadius: 4 },
-    ] : [{ label: 'Count', data: [correctCount, wrongCount, naCount], backgroundColor: ['#22c55e', '#ef4444', '#6b7280'], borderRadius: 4 }]
+      { label: 'Right', data: sections.map(s => s.right ?? 0), backgroundColor: '#22c55e', borderRadius: 4, maxBarThickness: 16 },
+      { label: 'Wrong', data: sections.map(s => s.wrong ?? 0), backgroundColor: '#ef4444', borderRadius: 4, maxBarThickness: 16 },
+      { label: 'NA', data: sections.map(s => s.na ?? 0), backgroundColor: '#6b7280', borderRadius: 4, maxBarThickness: 16 },
+    ] : [{ label: 'Count', data: [correctCount, wrongCount, naCount], backgroundColor: ['#22c55e', '#ef4444', '#6b7280'], borderRadius: 4, maxBarThickness: 16 }]
   };
 
   const donutData = {
     labels: ['Correct', 'Wrong', 'Skipped'],
-    datasets: [{ data: [correctCount, wrongCount, naCount], backgroundColor: ['#22c55e', '#ef4444', '#6b7280'], borderWidth: 0 }]
+    datasets: [{ data: [correctCount, wrongCount, naCount], backgroundColor: ['#22c55e', '#ef4444', '#6b7280'], borderWidth: 0, hoverOffset: 4 }]
   };
 
   return (
@@ -713,41 +713,54 @@ export default function ResultPage() {
               </motion.div>
 
               {/* ── CHARTS ─────────────────────────────────────────────────── */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-black">📊</span>
-                    <h3 className="font-extrabold text-indigo-950 text-base">{sections.length > 1 ? 'Section-wise Performance Breakdown' : 'Overall Performance Breakdown'}</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-black">📊</span>
+                    <h3 className="font-extrabold text-indigo-950 text-[13px]">{sections.length > 1 ? 'Section-wise Performance' : 'Overall Performance'}</h3>
                   </div>
-                  <Bar
-                    data={sectionBarData}
-                    options={{
-                      responsive: true,
-                      plugins: { legend: { labels: { color: '#475569', font: { size: 11, weight: 'bold' } } } },
-                      scales: {
-                        y: { beginAtZero: true, ticks: { color: '#64748b' }, grid: { color: '#f1f5f9' } },
-                        x: { ticks: { color: '#475569', font: { weight: 'bold' } }, grid: { display: false } }
-                      }
-                    }}
-                    height={110}
-                  />
+                  <div className="h-[200px] w-full">
+                    <Bar
+                      data={sectionBarData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                          duration: 1500,
+                          easing: 'easeOutQuart'
+                        },
+                        plugins: { legend: { labels: { color: '#475569', font: { size: 10, weight: 'bold' }, usePointStyle: true, boxWidth: 6 } } },
+                        scales: {
+                          y: { beginAtZero: true, ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#f1f5f9' }, border: { display: false } },
+                          x: { ticks: { color: '#475569', font: { weight: 'bold', size: 9 } }, grid: { display: false }, border: { display: false } }
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col items-center justify-between">
-                  <div className="flex items-center gap-2 self-start mb-4">
-                    <span className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-black">🎯</span>
-                    <h3 className="font-extrabold text-indigo-950 text-base">Attempt Distribution</h3>
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col items-center justify-between">
+                  <div className="flex items-center gap-2 self-start mb-2">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-black">🎯</span>
+                    <h3 className="font-extrabold text-indigo-950 text-[13px]">Attempt Distribution</h3>
                   </div>
-                  <div className="w-44 relative my-auto">
+                  <div className="w-36 h-36 relative my-auto">
                     <Doughnut
                       data={donutData}
                       options={{
-                        cutout: '74%',
-                        plugins: { legend: { position: 'bottom', labels: { color: '#475569', font: { size: 11, weight: 'bold' }, padding: 12 } } }
+                        cutout: '76%',
+                        maintainAspectRatio: false,
+                        animation: {
+                          animateScale: true,
+                          animateRotate: true,
+                          duration: 1500,
+                          easing: 'easeOutBounce'
+                        },
+                        plugins: { legend: { position: 'bottom', labels: { color: '#475569', font: { size: 10, weight: 'bold' }, padding: 10, usePointStyle: true, boxWidth: 6 } } }
                       }}
                     />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-6">
-                      <div className="text-2xl font-black text-indigo-950">{accuracy}%</div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Accuracy</div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none" style={{ marginTop: '-20px' }}>
+                      <div className="text-xl font-black text-indigo-950">{accuracy}%</div>
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Accuracy</div>
                     </div>
                   </div>
                 </div>
