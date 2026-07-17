@@ -114,136 +114,28 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
         </div>
       </div>
 
-      {/* ── CANDIDATE DETAILS GRID ─────────────────────────────────────── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: 'clamp(4px, 1vw, 12px)',
-        padding: '4px 6px',
-        background: '#ffffff',
-        borderBottom: `1px solid ${BORDER}`,
-      }}>
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {/* ── CANDIDATE DETAILS TABLE ─────────────────────────────────────── */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(9px, 2.5vw, 12px)', borderBottom: '1px solid #cbd5e1' }}>
+        <tbody>
           {[
-            {
-              label: 'Candidate Name',
-              value: candidate?.name || 'RAHUL KUMAR',
-              icon: (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Registration Number',
-              value: candidate?.registration_no || '072501113424',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <line x1="7" y1="8" x2="17" y2="8" />
-                  <line x1="7" y1="12" x2="17" y2="12" />
-                  <line x1="7" y1="16" x2="13" y2="16" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Roll Number',
-              value: candidate?.roll_number || '247252191871283',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Community / Category',
-              value: candidate?.community || 'UR',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              ),
-            },
-          ].map((item, idx) => (
-            <div key={idx} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px',
-              padding: '6px 0', borderBottom: idx < 3 ? '1px solid #f1f5f9' : 'none'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                <div style={{
-                  width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', flexShrink: 0,
-                  background: purpleCircle, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>{item.icon}</div>
-                <span style={{ fontSize: 'clamp(8.5px, 2vw, 11px)', fontWeight: '700', color: TEXT_MUTED }}>{item.label}</span>
-              </div>
-              <span style={{ fontSize: 'clamp(9.5px, 2.4vw, 12px)', fontWeight: '800', color: TEXT_DARK, textAlign: 'right', wordBreak: 'break-word', fontFamily: idx >= 1 && idx <= 2 ? 'monospace' : 'inherit' }}>{item.value}</span>
-            </div>
+            ['Candidate Name', candidate?.name || 'RAHUL KUMAR'],
+            ['Registration Number', candidate?.registration_no || '072501113424'],
+            ['Roll Number', candidate?.roll_number || '247252191871283'],
+            ['Community / Category', candidate?.community || 'UR'],
+            ['Test Centre', candidate?.test_centre_name || 'Dewa Mahila Mahavidyalaya'],
+            ['Exam Date', candidate?.test_date || '18/06/2026'],
+            ['Exam Time / Shift', candidate?.test_time || '12:45 PM - 2:15 PM'],
+          ].map(([label, value], idx) => (
+            <tr key={idx} style={{ borderBottom: idx < 6 ? '1px solid #e2e8f0' : 'none' }}>
+              <td style={{ padding: '6px 12px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderRight: '1px solid #e2e8f0', width: '40%' }}>{label}</td>
+              <td style={{ padding: '6px 12px', fontWeight: '800', color: '#0f172a', fontFamily: label.includes('Number') ? 'monospace' : 'inherit' }}>{value}</td>
+            </tr>
           ))}
-        </div>
-
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {[
-            {
-              label: 'Test Centre',
-              value: candidate?.test_centre_name || 'Dewa Mahila Mahavidyalaya',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-10a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Exam Date',
-              value: candidate?.test_date || '18/06/2026',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-              ),
-            },
-            {
-              label: 'Exam Time / Shift',
-              value: candidate?.test_time || '12:45 PM - 2:15 PM',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              ),
-            },
-          ].map((item, idx) => (
-            <div key={idx} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px',
-              padding: '6px 0', borderBottom: idx < 2 ? '1px solid #f1f5f9' : 'none'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                <div style={{
-                  width: 'clamp(22px, 6vw, 28px)', height: 'clamp(22px, 6vw, 28px)', borderRadius: '50%', flexShrink: 0,
-                  background: purpleCircle, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>{item.icon}</div>
-                <span style={{ fontSize: 'clamp(8.5px, 2vw, 11px)', fontWeight: '700', color: TEXT_MUTED }}>{item.label}</span>
-              </div>
-              <span style={{ fontSize: 'clamp(9.5px, 2.4vw, 12px)', fontWeight: '800', color: TEXT_DARK, textAlign: 'right', wordBreak: 'break-word', maxWidth: '65%' }}>{item.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        </tbody>
+      </table>
 
       {/* ── SECTION TABLE ──────────────────────────────────────────────── */}
-      <div style={{ padding: '8px 10px', background: '#ffffff' }}>
-        <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-          <table style={{ width: '100%', tableLayout: 'auto', borderCollapse: 'collapse', fontSize: 'clamp(9px, 2.5vw, 12px)' }}>
+      <table style={{ width: '100%', tableLayout: 'auto', borderCollapse: 'collapse', fontSize: 'clamp(9px, 2.5vw, 12px)' }}>
             <thead>
               <tr style={{ background: '#1e1b4b', color: '#ffffff' }}>
                 {['SECTION', 'TOTAL', 'SKIP', 'RIGHT', 'WRONG', 'SCORE'].map((h, i) => (
@@ -343,163 +235,67 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
 
-      {/* ── CLEAN STATS ROW ────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-        gap: '8px',
-        padding: '8px 12px 16px 12px',
-        background: '#ffffff',
-      }}>
-        {/* Stat 1: LIVE RANK */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-          <div style={{ fontSize: '22px', marginBottom: '4px' }}>🏆</div>
-          <div style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', fontWeight: '900', color: '#16a34a', lineHeight: 1 }}>{rank?.rank ? `#${rank.rank}` : '#1'}</div>
-          <div style={{ fontSize: '9px', fontWeight: '800', color: '#14532d', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Live Rank</div>
-          <div style={{ fontSize: '8px', color: '#64748b', fontWeight: '700', marginTop: '3px' }}>Of {rank?.total_appeared ? Number(rank.total_appeared).toLocaleString() : '2'}</div>
-        </div>
-        
-        {/* Stat 2: PERCENTILE */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-          <div style={{ fontSize: '22px', marginBottom: '4px' }}>🎯</div>
-          <div style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', fontWeight: '900', color: '#0284c7', lineHeight: 1 }}>{rank?.percentile ? `${Number(rank.percentile).toFixed(1)}%` : '100.0%'}</div>
-          <div style={{ fontSize: '9px', fontWeight: '800', color: '#0c4a6e', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Percentile</div>
-          <div style={{ fontSize: '8px', color: '#64748b', fontWeight: '700', marginTop: '3px' }}>Top {rank?.percentile ? (100 - rank.percentile).toFixed(1) : '0.0'}%</div>
-        </div>
+      {/* ── OVERALL STATS TABLE ────────────────────────────────────────────────── */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(10px, 2.5vw, 13px)' }}>
+        <thead>
+          <tr style={{ background: '#f1f5f9', color: '#475569', fontSize: 'clamp(7.5px, 2vw, 10px)' }}>
+            <th style={{ padding: '8px 4px', border: '1px solid #cbd5e1', width: '25%' }}>LIVE RANK</th>
+            <th style={{ padding: '8px 4px', border: '1px solid #cbd5e1', width: '25%' }}>PERCENTILE</th>
+            <th style={{ padding: '8px 4px', border: '1px solid #cbd5e1', width: '25%' }}>OFFICIAL SCORE</th>
+            <th style={{ padding: '8px 4px', border: '1px solid #cbd5e1', width: '25%' }}>ACCURACY RATE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: '12px 4px', textAlign: 'center', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontWeight: '900', color: '#16a34a', fontSize: 'clamp(14px, 3.5vw, 18px)' }}>{rank?.rank ? `#${rank.rank}` : '#1'}</div>
+              <div style={{ fontSize: '7.5px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>Out of {rank?.total_appeared ? Number(rank.total_appeared).toLocaleString() : '2'}</div>
+            </td>
+            <td style={{ padding: '12px 4px', textAlign: 'center', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontWeight: '900', color: '#0284c7', fontSize: 'clamp(14px, 3.5vw, 18px)' }}>{rank?.percentile ? `${Number(rank.percentile).toFixed(1)}%` : '100.0%'}</div>
+              <div style={{ fontSize: '7.5px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>Top {rank?.percentile ? (100 - rank.percentile).toFixed(1) : '0.0'}%</div>
+            </td>
+            <td style={{ padding: '12px 4px', textAlign: 'center', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontWeight: '900', color: '#d97706', fontSize: 'clamp(14px, 3.5vw, 18px)' }}>{totalMarks}</div>
+              <div style={{ fontSize: '7.5px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>Max: {maxMarks}</div>
+            </td>
+            <td style={{ padding: '12px 4px', textAlign: 'center', border: '1px solid #cbd5e1' }}>
+              <div style={{ fontWeight: '900', color: '#9333ea', fontSize: 'clamp(14px, 3.5vw, 18px)' }}>{accuracy}%</div>
+              <div style={{ fontSize: '7.5px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>{correct} / {totalAttempted} Correct</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-        {/* Stat 3: OFFICIAL SCORE */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-          <div style={{ fontSize: '22px', marginBottom: '4px' }}>🛡️</div>
-          <div style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', fontWeight: '900', color: '#d97706', lineHeight: 1 }}>{totalMarks}</div>
-          <div style={{ fontSize: '9px', fontWeight: '800', color: '#78350f', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Official Score</div>
-          <div style={{ fontSize: '8px', color: '#64748b', fontWeight: '700', marginTop: '3px' }}>Out of {maxMarks}</div>
-        </div>
-
-        {/* Stat 4: ACCURACY RATE */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '8px', background: '#f8fafc', borderRadius: '8px' }}>
-          <div style={{ fontSize: '22px', marginBottom: '4px' }}>✅</div>
-          <div style={{ fontSize: 'clamp(14px, 3.5vw, 18px)', fontWeight: '900', color: '#9333ea', lineHeight: 1 }}>{accuracy}%</div>
-          <div style={{ fontSize: '9px', fontWeight: '800', color: '#581c87', marginTop: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Accuracy Rate</div>
-          <div style={{ fontSize: '8px', color: '#64748b', fontWeight: '700', marginTop: '3px' }}>{correct} / {totalAttempted} Correct</div>
-        </div>
-      </div>
-
-      {/* ── DETAILED VERIFICATION FOOTER ────────────────────────────────── */}
-      <div style={{
-        padding: '10px 12px',
-        background: '#f8fafc',
-        borderTop: '1px solid #cbd5e1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '12px',
-        flexWrap: 'wrap',
-      }}>
-        {/* Left: Marking Scheme */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '8px', fontWeight: '800', color: TEXT_MUTED, letterSpacing: '0.5px', textTransform: 'uppercase' }}>MARKING SCHEME</div>
-          <div style={{ display: 'flex', gap: '14px', fontSize: '11px', fontWeight: '700' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ color: '#16a34a' }}>+1.0</span>
-              <span style={{ fontSize: '8px', color: TEXT_MUTED, fontWeight: '600', marginTop: '1px' }}>Correct</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ color: '#dc2626' }}>-0.33</span>
-              <span style={{ fontSize: '8px', color: TEXT_MUTED, fontWeight: '600', marginTop: '1px' }}>Wrong</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ color: TEXT_DARK }}>0.0</span>
-              <span style={{ fontSize: '8px', color: TEXT_MUTED, fontWeight: '600', marginTop: '1px' }}>Skipped</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Center: Verification Capsule */}
-        <div style={{
-          background: '#ffffff',
-          border: '1px solid #cbd5e1',
-          borderRadius: '10px',
-          padding: '8px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="m9 11 2 2 4-4" />
-          </svg>
-          <div>
-            <div style={{ fontSize: '9px', fontWeight: '700', color: TEXT_DARK, lineHeight: 1.1 }}>This is a digitally verified score card.</div>
-            <a href="https://RankVeda.in" target="_blank" rel="noreferrer" style={{ fontSize: '9px', fontWeight: '800', color: '#2563eb', textDecoration: 'none' }}>
-              RankVeda.in Official Certificate
-            </a>
-          </div>
-        </div>
-
-        {/* Right: QR Code Mock verification details */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Custom SVG QR Code Placeholder */}
-          <div style={{
-            width: '42px', height: '42px', border: '1px solid #cbd5e1', borderRadius: '4px',
-            background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <svg width="34" height="34" viewBox="0 0 100 100">
-              <rect x="5" y="5" width="25" height="25" fill="#0f172a" />
-              <rect x="10" y="10" width="15" height="15" fill="#fff" />
-              <rect x="13" y="13" width="9" height="9" fill="#0f172a" />
-              <rect x="70" y="5" width="25" height="25" fill="#0f172a" />
-              <rect x="75" y="10" width="15" height="15" fill="#fff" />
-              <rect x="78" y="13" width="9" height="9" fill="#0f172a" />
-              <rect x="5" y="70" width="25" height="25" fill="#0f172a" />
-              <rect x="10" y="75" width="15" height="15" fill="#fff" />
-              <rect x="13" y="78" width="9" height="9" fill="#0f172a" />
-              {/* QR Dots */}
-              <rect x="40" y="10" width="5" height="10" fill="#0f172a" />
-              <rect x="48" y="18" width="8" height="5" fill="#0f172a" />
-              <rect x="58" y="8" width="5" height="8" fill="#0f172a" />
-              <rect x="38" y="45" width="12" height="12" fill="#0f172a" />
-              <rect x="56" y="40" width="10" height="5" fill="#0f172a" />
-              <rect x="72" y="48" width="12" height="5" fill="#0f172a" />
-              <rect x="80" y="72" width="15" height="15" fill="#0f172a" />
-              <rect x="48" y="72" width="10" height="10" fill="#0f172a" />
-              <rect x="58" y="82" width="10" height="8" fill="#0f172a" />
-            </svg>
-          </div>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '9px', fontWeight: '800', color: TEXT_DARK, lineHeight: 1.1 }}>Scan to Verify</div>
-            <div style={{ fontSize: '8.5px', fontWeight: '600', color: TEXT_MUTED, marginTop: '2px', lineHeight: 1.2 }}>
-              Certificate ID: <span style={{ fontWeight: '800', color: TEXT_DARK }}>RV1710726</span>
-              <br />
-              or visit <a href="https://RankVeda.in/verify" target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '700' }}>RankVeda.in/verify</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── VERY BOTTOM COPYRIGHT/SIGNATURE BAR ─────────────────────────── */}
-      <div style={{
-        background: '#0a0f29',
-        padding: '8px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: '9px',
-        fontWeight: '600',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>🔒</span>
-          <span>This certificate is system generated and does not require signature.</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: '800', color: '#ffffff' }}>
-          <span style={{ color: '#fbbf24' }}>⚡</span>
-          <span>RankVeda.in</span>
-        </div>
-      </div>
+      {/* ── FOOTER TABLE ────────────────────────────────── */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(8px, 2.2vw, 11px)' }}>
+        <tbody>
+          <tr>
+            <td style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', width: '60%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="m9 11 2 2 4-4" />
+                </svg>
+                <div>
+                  <div style={{ fontWeight: '800', color: '#0f172a' }}>Digitally Verified Official Score Card</div>
+                  <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '1px' }}>Marking Scheme: +1.0 Correct, -0.33 Wrong, 0.0 Skipped</div>
+                </div>
+              </div>
+            </td>
+            <td style={{ padding: '8px 12px', background: '#ffffff', textAlign: 'right', border: '1px solid #cbd5e1', width: '40%' }}>
+              <div style={{ fontWeight: '800', color: '#0f172a' }}>Certificate ID: RV1710726</div>
+              <a href="https://RankVeda.in/verify" target="_blank" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>Verify on RankVeda.in</a>
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} style={{ background: '#0f172a', padding: '6px 12px', color: 'rgba(255,255,255,0.7)', fontSize: '8px', textAlign: 'center' }}>
+              This certificate is system generated and does not require a physical signature. © RankVeda
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 });
