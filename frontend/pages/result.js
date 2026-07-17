@@ -429,21 +429,9 @@ export default function ResultPage() {
         link.click();
         toast.success('✅ Score card downloaded!');
       } else {
-        // Generate PDF on frontend to match UI perfectly
-        const html2canvas = (await import('html2canvas')).default;
-        const { jsPDF } = await import('jspdf');
-        const canvas = await html2canvas(marksheetRef.current, {
-          backgroundColor: '#ffffff', scale: 2, useCORS: true, allowTaint: true
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'px',
-          format: [canvas.width / 2, canvas.height / 2]
-        });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
-        pdf.save(`RankVeda_Scorecard_${rollNo}.pdf`);
-        toast.success('✅ PDF downloaded!');
+        // Generate real-text vector PDF using native browser print
+        window.print();
+        toast.success('✅ Please save as PDF in the print dialog.');
       }
     } catch (e) { toast.error('Download failed: ' + e.message); }
     finally { setDownloading(false); }
@@ -574,6 +562,33 @@ export default function ResultPage() {
         <meta name="twitter:title" content={pageTitle} />
       </Head>
 
+      {/* Global Print Styles to isolate the scorecard for native PDF generation */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-marksheet, .print-marksheet * {
+            visibility: visible;
+          }
+          .print-marksheet {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          /* Force background colors to print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
+
       <div className="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col justify-between">
         <div>
           {/* ── UNIFORM NAVBAR ───────────────────────────────────────────── */}
@@ -667,7 +682,7 @@ export default function ResultPage() {
                     </button>
                   </div>
                 </div>
-                <div className="w-full shadow-2xl ring-1 ring-slate-200 rounded-2xl overflow-hidden bg-white">
+                <div className="w-full shadow-2xl ring-1 ring-slate-200 rounded-2xl overflow-hidden bg-white print-marksheet">
                   <MarksheetCard ref={marksheetRef} candidate={candidateForCard} score={scoreForCard} rank={rankForCard} />
                 </div>
               </motion.div>
