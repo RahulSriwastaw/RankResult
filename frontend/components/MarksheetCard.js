@@ -562,6 +562,7 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
           <span style={{ color: '#fbbf24' }}>⚡</span>
           <span>RankVeda.in</span>
         </div>
+      </div>
     </div>
   );
 });
