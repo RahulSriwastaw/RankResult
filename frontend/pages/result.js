@@ -273,21 +273,21 @@ const LoadingScreen = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-950 text-white overflow-hidden relative">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-slate-800 overflow-hidden relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] mix-blend-screen animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-300/40 rounded-full blur-[100px] mix-blend-multiply animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-300/40 rounded-full blur-[100px] mix-blend-multiply animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       <div className="relative z-10 flex flex-col items-center max-w-md w-full px-6 text-center">
         <div className="relative w-24 h-24 mb-8">
           <motion.div
-            className="absolute inset-0 rounded-full border-t-2 border-indigo-500 border-r-2 border-transparent"
+            className="absolute inset-0 rounded-full border-t-2 border-indigo-600 border-r-2 border-transparent"
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
           />
           <motion.div
-            className="absolute inset-2 rounded-full border-b-2 border-purple-500 border-l-2 border-transparent"
+            className="absolute inset-2 rounded-full border-b-2 border-purple-600 border-l-2 border-transparent"
             animate={{ rotate: -360 }}
             transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
           />
@@ -301,7 +301,7 @@ const LoadingScreen = () => {
         </div>
 
         <motion.h2 
-          className="text-2xl font-black mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400"
+          className="text-2xl font-black mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -315,25 +315,25 @@ const LoadingScreen = () => {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              className="text-gray-400 text-sm font-medium absolute"
+              className="text-slate-500 text-sm font-medium absolute"
             >
               {loadingMessages[msgIndex]}
             </motion.p>
           </AnimatePresence>
         </div>
 
-        <div className="w-full bg-gray-800 rounded-full h-1.5 mb-8 overflow-hidden">
+        <div className="w-full bg-slate-200 rounded-full h-1.5 mb-8 overflow-hidden shadow-inner">
           <motion.div 
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-md"
             initial={{ width: "10%" }}
             animate={{ width: "95%" }}
             transition={{ duration: 15, ease: "easeOut" }}
           />
         </div>
 
-        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 w-full backdrop-blur-sm">
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-2">Did You Know?</p>
-          <p className="text-sm text-gray-300 font-medium leading-relaxed">
+        <div className="bg-white/80 border border-slate-200 shadow-xl rounded-2xl p-4 w-full backdrop-blur-md">
+          <p className="text-xs text-indigo-600 font-extrabold uppercase tracking-wider mb-2">Did You Know?</p>
+          <p className="text-sm text-slate-600 font-medium leading-relaxed">
             RankVeda's AI engine analyzes millions of data points to predict your normalized score and all-India rank with high precision.
           </p>
         </div>
