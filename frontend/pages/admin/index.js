@@ -1107,29 +1107,109 @@ function Results() {
   const [selectedResult, setSelectedResult] = useState(null);
   const [bulkSelected, setBulkSelected] = useState([]);
 
-  useEffect(() => { fetchResults(); }, [page, search]);
+  // Filter States
+  const [exams, setExams] = useState([]);
+  const [examId, setExamId] = useState('');
+  const [category, setCategory] = useState('');
+  const [shiftDate, setShiftDate] = useState('');
+  const [shiftTime, setShiftTime] = useState('');
+  const [subject, setSubject] = useState('');
+  const [minScore, setMinScore] = useState('');
+  const [maxScore, setMaxScore] = useState('');
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  useEffect(() => {
+    fetchResults();
+  }, [page, search, examId, category, shiftDate, shiftTime, subject, minScore, maxScore]);
+
+  const fetchExams = async () => {
+    try {
+      const res = await fetch(`${API}/exams`);
+      const data = await res.json();
+      setExams(Array.isArray(data.exams) ? data.exams : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchResults = async () => {
     setLoading(true);
-    try { const res = await fetch(`${API}/results?page=${page}&per_page=20&search=${search}`); const data = await res.json(); setResults(data.results); setTotalPages(data.pages); }
-    catch (e) { console.error(e); } finally { setLoading(false); }
+    try {
+      let url = `${API}/results?page=${page}&per_page=20&search=${search}`;
+      if (examId) url += `&exam_id=${examId}`;
+      if (category) url += `&category=${category}`;
+      if (shiftDate) url += `&shift_date=${encodeURIComponent(shiftDate)}`;
+      if (shiftTime) url += `&shift_time=${encodeURIComponent(shiftTime)}`;
+      if (subject) url += `&subject=${encodeURIComponent(subject)}`;
+      if (minScore) url += `&min_score=${minScore}`;
+      if (maxScore) url += `&max_score=${maxScore}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      setResults(data.results);
+      setTotalPages(data.pages);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const runBulkDeleteResults = async () => {
     if (bulkSelected.length === 0) return;
     if (!confirm(`Delete ${bulkSelected.length} results?`)) return;
-    try { const res = await fetch(`${API}/results/bulk-delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: bulkSelected }) }); const data = await res.json(); if (data.success) { alert(`${data.deleted} Results deleted`); setBulkSelected([]); if (page === 1) fetchResults(); else setPage(1); } else alert('Error: ' + (data.error || '')); }
-    catch (e) { alert('Delete failed'); }
+    try {
+      const res = await fetch(`${API}/results/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: bulkSelected })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`${data.deleted} Results deleted`);
+        setBulkSelected([]);
+        if (page === 1) fetchResults();
+        else setPage(1);
+      } else {
+        alert('Error: ' + (data.error || ''));
+      }
+    } catch (e) {
+      alert('Delete failed');
+    }
   };
 
-  const fetchResultDetail = async id => { try { const res = await fetch(`${API}/results/${id}`); const data = await res.json(); setSelectedResult(data); } catch (e) { console.error(e); } };
-  const deleteResult = async id => { if (!confirm('Delete this result?')) return; try { await fetch(`${API}/results/${id}`, { method: 'DELETE' }); fetchResults(); } catch (e) { console.error(e); } };
+  const fetchResultDetail = async id => {
+    try {
+      const res = await fetch(`${API}/results/${id}`);
+      const data = await res.json();
+      setSelectedResult(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteResult = async id => {
+    if (!confirm('Delete this result?')) return;
+    try {
+      await fetch(`${API}/results/${id}`, { method: 'DELETE' });
+      fetchResults();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const exportCSV = () => {
     if (!results.length) return;
-    const headers = ['ID', 'Roll No', 'Score', 'Rank', 'Percentile', 'Category', 'Questions', 'Date'];
-    const rows = results.map(r => [r.id, r.roll_number, r.score, r.rank, r.percentile, r.category, r.questions_count, r.created_at].join(','));
+    const headers = ['ID', 'Candidate Name', 'Roll No', 'Score', 'Rank', 'Percentile', 'Category', 'Questions', 'Date'];
+    const rows = results.map(r => [r.id, r.candidate_name, r.roll_number, r.score, r.rank, r.percentile, r.category, r.questions_count, r.created_at].join(','));
     const csv = [headers.join(','), ...rows].join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `results_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `results_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
   };
 
   if (selectedResult) {
@@ -1163,7 +1243,27 @@ function Results() {
         </div>
         {/* Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <div className="card p-4"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><FaChartBar className="text-indigo-400" /> Candidate Info</h3>
+          <div className="card p-4">
+            <div className="flex items-center gap-4 mb-3">
+              {r.application_photograph ? (
+                <img
+                  src={r.application_photograph}
+                  alt={r.candidate_name}
+                  className="w-16 h-16 rounded-lg object-cover border border-[rgb(var(--border))]"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xl uppercase">
+                  {r.candidate_name ? r.candidate_name.charAt(0) : 'U'}
+                </div>
+              )}
+              <div>
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <FaChartBar className="text-indigo-400" /> Candidate Info
+                </h3>
+                <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">{r.candidate_name || 'Anonymous'}</p>
+              </div>
+            </div>
             <div className="space-y-1.5 text-sm">{[['Registration', r.registration_number], ['Roll No', r.roll_number], ['Name', r.candidate_name], ['Community', r.community], ['Test Centre', r.test_centre_name], ['Test Date', r.test_date], ['Test Time', r.test_time], ['Subject', r.subject]].map(([label, val]) => (
               <div key={label} className="flex justify-between"><span className="text-[rgb(var(--muted-foreground))]">{label}</span><span className="text-right">{val || '\u2014'}</span></div>
             ))}</div>
@@ -1197,11 +1297,112 @@ function Results() {
         {bulkSelected.length > 0 && <div className="flex items-center gap-2"><span className="text-xs text-[rgb(var(--primary))]">{bulkSelected.length} selected</span><button onClick={runBulkDeleteResults} className="btn-destructive btn-sm">Bulk Delete</button><button onClick={() => setBulkSelected([])} className="btn-ghost btn-sm">Clear</button></div>}
         <button onClick={exportCSV} className="btn-primary btn-sm"><FaDownload size={12} /> CSV</button>
       </PageHeader>
-      <div className="card p-3 mb-4"><FaSearch className="absolute ml-3 mt-2.5 text-[rgb(var(--muted-foreground))] w-4 h-4" /><input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="input pl-9" placeholder="Search by roll number..." /></div>
+      
+      {/* Filters - Mobile Friendly */}
+      <div className="card p-3 mb-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <div className="col-span-2 relative flex items-center">
+          <FaSearch className="absolute ml-3 text-[rgb(var(--muted-foreground))] w-4 h-4" />
+          <input
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search roll, name, registration..."
+            className="input h-8 text-xs pl-9 w-full"
+          />
+        </div>
+        <select
+          value={examId}
+          onChange={e => { setExamId(e.target.value); setPage(1); }}
+          className="input h-8 text-xs w-full"
+        >
+          <option value="">All Exams</option>
+          {exams.map(exam => (
+            <option key={exam.id} value={exam.id}>{exam.name}</option>
+          ))}
+        </select>
+        <select
+          value={category}
+          onChange={e => { setCategory(e.target.value); setPage(1); }}
+          className="input h-8 text-xs w-full"
+        >
+          <option value="">All Categories</option>
+          {['UR', 'OBC', 'SC', 'ST', 'EWS'].map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+        <input
+          value={shiftDate}
+          onChange={e => { setShiftDate(e.target.value); setPage(1); }}
+          placeholder="Shift Date"
+          className="input h-8 text-xs w-full"
+        />
+        <input
+          value={shiftTime}
+          onChange={e => { setShiftTime(e.target.value); setPage(1); }}
+          placeholder="Shift Time"
+          className="input h-8 text-xs w-full"
+        />
+        <input
+          value={subject}
+          onChange={e => { setSubject(e.target.value); setPage(1); }}
+          placeholder="Subject..."
+          className="input h-8 text-xs w-full"
+        />
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={minScore}
+            onChange={e => { setMinScore(e.target.value); setPage(1); }}
+            placeholder="Min Score"
+            className="input h-8 text-xs w-full"
+          />
+          <input
+            type="number"
+            value={maxScore}
+            onChange={e => { setMaxScore(e.target.value); setPage(1); }}
+            placeholder="Max Score"
+            className="input h-8 text-xs w-full"
+          />
+        </div>
+      </div>
+
       <div className="card overflow-x-auto">
-        <table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header w-10"><input type="checkbox" onChange={e => { if (e.target.checked) setBulkSelected(results.map(r => r.id)); else setBulkSelected([]); }} checked={results.length > 0 && bulkSelected.length === results.length} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></th><th className="table-header">ID</th><th className="table-header">Roll</th><th className="table-header">Score</th><th className="table-header">Rank</th><th className="table-header">%</th><th className="table-header">Category</th><th className="table-header">Q</th><th className="table-header">Date</th><th className="table-header">Actions</th></tr></thead>
-          <tbody>{loading ? <tr><td colSpan="10" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : results.length === 0 ? <tr><td colSpan="10" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No results found.</td></tr> : results.map(r => (
-            <tr key={r.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors"><td className="table-cell"><input type="checkbox" checked={bulkSelected.includes(r.id)} onChange={() => setBulkSelected(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id])} className="w-4 h-4 rounded" /></td><td className="table-cell text-[rgb(var(--muted-foreground))] font-mono">#{r.id}</td><td className="table-cell font-mono text-xs">{r.roll_number}</td><td className="table-cell font-semibold">{r.score}</td><td className="table-cell text-purple-400">#{r.rank}</td><td className="table-cell">{r.percentile}%</td><td className="table-cell"><span className="badge-info">{r.category}</span></td><td className="table-cell">{r.questions_count}</td><td className="table-cell text-xs text-[rgb(var(--muted-foreground))]">{new Date(r.created_at).toLocaleDateString()}</td><td className="table-cell"><div className="flex gap-1"><button onClick={() => fetchResultDetail(r.id)} className="btn-ghost p-1.5"><FaEye size={14} /></button><button onClick={() => deleteResult(r.id)} className="btn-ghost p-1.5 text-red-400"><FaTrash size={14} /></button></div></td></tr>
+        <table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header w-10"><input type="checkbox" onChange={e => { if (e.target.checked) setBulkSelected(results.map(r => r.id)); else setBulkSelected([]); }} checked={results.length > 0 && bulkSelected.length === results.length} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></th><th className="table-header">ID</th><th className="table-header">Candidate</th><th className="table-header">Roll / Reg</th><th className="table-header">Subject</th><th className="table-header">Score</th><th className="table-header">Rank</th><th className="table-header">%</th><th className="table-header">Category</th><th className="table-header">Q</th><th className="table-header">Date</th><th className="table-header">Actions</th></tr></thead>
+          <tbody>{loading ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : results.length === 0 ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No results found.</td></tr> : results.map(r => (
+            <tr key={r.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors">
+              <td className="table-cell"><input type="checkbox" checked={bulkSelected.includes(r.id)} onChange={() => setBulkSelected(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id])} className="w-4 h-4 rounded" /></td>
+              <td className="table-cell text-[rgb(var(--muted-foreground))] font-mono">#{r.id}</td>
+              <td className="table-cell">
+                <div className="flex items-center gap-2">
+                  {r.application_photograph ? (
+                    <img
+                      src={r.application_photograph}
+                      alt={r.candidate_name}
+                      className="w-7 h-7 rounded-full object-cover border border-[rgb(var(--border))]"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xs uppercase">
+                      {r.candidate_name ? r.candidate_name.charAt(0) : 'U'}
+                    </div>
+                  )}
+                  <span className="font-semibold text-xs">{r.candidate_name || '—'}</span>
+                </div>
+              </td>
+              <td className="table-cell">
+                <div className="text-xs font-mono">{r.roll_number}</div>
+                {r.registration_number && <div className="text-[10px] text-[rgb(var(--muted-foreground))] font-mono">Reg: {r.registration_number}</div>}
+              </td>
+              <td className="table-cell text-xs text-[rgb(var(--muted-foreground))] max-w-[120px] truncate" title={r.subject}>
+                {r.subject || '—'}
+              </td>
+              <td className="table-cell font-semibold">{r.score}</td>
+              <td className="table-cell text-purple-400">#{r.rank}</td>
+              <td className="table-cell">{r.percentile}%</td>
+              <td className="table-cell"><span className="badge-info">{r.category}</span></td>
+              <td className="table-cell">{r.questions_count}</td>
+              <td className="table-cell text-xs text-[rgb(var(--muted-foreground))]">{new Date(r.created_at).toLocaleDateString()}</td>
+              <td className="table-cell"><div className="flex gap-1"><button onClick={() => fetchResultDetail(r.id)} className="btn-ghost p-1.5"><FaEye size={14} /></button><button onClick={() => deleteResult(r.id)} className="btn-ghost p-1.5 text-red-400"><FaTrash size={14} /></button></div></td>
+            </tr>
           ))}</tbody>
         </table>
       </div>
