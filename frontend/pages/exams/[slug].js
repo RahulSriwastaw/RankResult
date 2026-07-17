@@ -297,7 +297,7 @@ export default function ExamPage({ exam, allExams = [] }) {
       <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
 
         {/* ── Navbar ─────────────────────────────────────────────────────── */}
-        <Navbar user={user} />
+        <Navbar />
 
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
         <nav aria-label="breadcrumb" className="max-w-7xl mx-auto px-4 pt-4">
