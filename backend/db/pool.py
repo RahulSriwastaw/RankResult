@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
-from .models import db
+from .models import db, BlogPost, Exam, MasterQuestion, ExamResult, User, UserPoints, ExamPurchase, PointsPack
 
 
 def _ensure_columns(table_name, columns):
@@ -33,6 +33,25 @@ def init_db(app):
                 'price': 'price INTEGER DEFAULT 0',
                 'description': 'description TEXT',
                 'disclaimer': 'disclaimer TEXT',
+                'slug': 'slug VARCHAR(100)',
+                'status': "status VARCHAR(50) DEFAULT 'active'",
+                'full_name': 'full_name VARCHAR(200)',
+                'year': 'year VARCHAR(50)',
+                'icon': 'icon VARCHAR(50)',
+                'badge': 'badge VARCHAR(50)',
+                'color': 'color VARCHAR(200)',
+                'border': 'border VARCHAR(200)',
+                'badge_color': 'badge_color VARCHAR(200)',
+                'theme_color': 'theme_color VARCHAR(50)',
+                'conducted_by': 'conducted_by VARCHAR(200)',
+                'body_text': 'body_text TEXT',
+                'desc_card': 'desc_card TEXT',
+                'sections': 'sections JSON',
+                'highlights': 'highlights JSON',
+                'features': 'features JSON',
+                'faq': 'faq JSON',
+                'seo': 'seo JSON',
+                'marketplace_config': 'marketplace_config JSON',
             })
             _ensure_columns('user_points', {
                 'total_earned': 'total_earned INTEGER DEFAULT 0',
@@ -72,17 +91,105 @@ def init_db(app):
                 'likes': 'likes INTEGER DEFAULT 0',
             })
 
-        # Seed default exam if empty
+        # Seed default exam if empty, or populate from seed_exams.json
+        import json
+        import os
+        from datetime import date
         from .models import Exam
-        if Exam.query.count() == 0:
-            from datetime import date
-            default_exam = Exam(
-                id=1,
-                name="RRB NTPC CBT 1",
-                date=date.today(),
-                total_questions=100,
-                price=0,
-                description="Default NTPC Exam"
-            )
-            db.session.add(default_exam)
-            db.session.commit()
+
+        seed_path = os.path.join(os.path.dirname(__file__), 'seed_exams.json')
+        if os.path.exists(seed_path):
+            try:
+                with open(seed_path, 'r', encoding='utf-8') as f:
+                    seed_exams = json.load(f)
+                for item in seed_exams:
+                    exam_id = item.get('examId') or item.get('id')
+                    if not exam_id:
+                        continue
+                    existing = Exam.query.get(exam_id)
+                    if not existing:
+                        exam = Exam(
+                            id=exam_id,
+                            name=item.get('name'),
+                            date=date.today(),
+                            total_questions=item.get('total_questions') or 100,
+                            price=item.get('marketplace', {}).get('defaultPackPrice', 0) if item.get('marketplace') else 0,
+                            description=item.get('marketplace', {}).get('folderDescription', '') if item.get('marketplace') else '',
+                            disclaimer=item.get('marketplace', {}).get('disclaimer', '') if item.get('marketplace') else '',
+                            slug=item.get('slug'),
+                            status=item.get('status', 'active'),
+                            full_name=item.get('fullName'),
+                            year=item.get('year'),
+                            icon=item.get('icon'),
+                            badge=item.get('badge'),
+                            color=item.get('color'),
+                            border=item.get('border'),
+                            badge_color=item.get('badgeColor'),
+                            theme_color=item.get('themeColor'),
+                            conducted_by=item.get('conductedBy'),
+                            body_text=item.get('bodyText'),
+                            desc_card=item.get('descCard'),
+                            sections=item.get('sections'),
+                            highlights=item.get('highlights'),
+                            features=item.get('features'),
+                            faq=item.get('faq'),
+                            seo=item.get('seo'),
+                            marketplace_config=item.get('marketplace')
+                        )
+                        db.session.add(exam)
+                    else:
+                        # Sync new properties if they are missing
+                        if not existing.slug:
+                            existing.slug = item.get('slug')
+                        if not existing.status:
+                            existing.status = item.get('status', 'active')
+                        if not existing.full_name:
+                            existing.full_name = item.get('fullName')
+                        if not existing.year:
+                            existing.year = item.get('year')
+                        if not existing.icon:
+                            existing.icon = item.get('icon')
+                        if not existing.badge:
+                            existing.badge = item.get('badge')
+                        if not existing.color:
+                            existing.color = item.get('color')
+                        if not existing.border:
+                            existing.border = item.get('border')
+                        if not existing.badge_color:
+                            existing.badge_color = item.get('badgeColor')
+                        if not existing.theme_color:
+                            existing.theme_color = item.get('themeColor')
+                        if not existing.conducted_by:
+                            existing.conducted_by = item.get('conductedBy')
+                        if not existing.body_text:
+                            existing.body_text = item.get('bodyText')
+                        if not existing.desc_card:
+                            existing.desc_card = item.get('descCard')
+                        if not existing.sections:
+                            existing.sections = item.get('sections')
+                        if not existing.highlights:
+                            existing.highlights = item.get('highlights')
+                        if not existing.features:
+                            existing.features = item.get('features')
+                        if not existing.faq:
+                            existing.faq = item.get('faq')
+                        if not existing.seo:
+                            existing.seo = item.get('seo')
+                        if not existing.marketplace_config:
+                            existing.marketplace_config = item.get('marketplace')
+                db.session.commit()
+            except Exception as se:
+                print(f"Error seeding exams: {se}")
+                db.session.rollback()
+        else:
+            if Exam.query.count() == 0:
+                default_exam = Exam(
+                    id=1,
+                    name="RRB NTPC CBT 1",
+                    date=date.today(),
+                    total_questions=100,
+                    price=0,
+                    description="Default NTPC Exam"
+                )
+                db.session.add(default_exam)
+                db.session.commit()

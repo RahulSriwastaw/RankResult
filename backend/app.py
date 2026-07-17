@@ -9,6 +9,8 @@ from routes.live_stats import live_stats_bp
 from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.marketplace import marketplace_bp
+from routes.public_exams import public_exams_bp
+from routes.blog import blog_bp
 import stripe
 
 def create_app():
@@ -29,6 +31,8 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(marketplace_bp)
+    app.register_blueprint(public_exams_bp)
+    app.register_blueprint(blog_bp)
 
     
     # Error handlers

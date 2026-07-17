@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,9 +8,20 @@ import {
   FaPlus, FaTrash, FaEdit, FaEye, FaArrowLeft,
   FaChevronLeft, FaChevronRight, FaCog, FaExclamationTriangle,
   FaRobot, FaUserPlus, FaChartBar, FaCheckCircle,
-  FaHome, FaChartLine
+  FaHome, FaChartLine, FaBookOpen, FaMagic, FaRegFileAlt, FaGlobe,
+  FaPen, FaSave
 } from 'react-icons/fa';
 import { cn } from '../../lib/utils';
+import dynamic from 'next/dynamic';
+
+const ReactQuill = dynamic(() => import('react-quill'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-96 bg-slate-50 border border-slate-200 rounded-2xl animate-pulse flex items-center justify-center text-slate-400 text-xs font-bold">
+      Loading rich text editor...
+    </div>
+  )
+});
 
 const API = 'http://localhost:5000/api/admin';
 
@@ -66,6 +77,7 @@ export default function AdminLayout() {
     { id: 'parsed', icon: FaDatabase, label: 'Parsed' },
     { id: 'transactions', icon: FaMoneyBillWave, label: 'Transactions' },
     { id: 'pointspacks', icon: FaCoins, label: 'Points' },
+    { id: 'blog', icon: FaBookOpen, label: 'Blog' },
   ];
 
   return (
@@ -144,6 +156,7 @@ export default function AdminLayout() {
               {tab === 'parsed' && <ParsedData />}
               {tab === 'transactions' && <Transactions />}
               {tab === 'pointspacks' && <PointsPacks />}
+              {tab === 'blog' && <Blog />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -501,49 +514,521 @@ function PointsAdjustModal({ user, onClose, onSave }) {
 function Exams() {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingExam, setEditingExam] = useState(null); // when not null, show full edit form
   const [showAdd, setShowAdd] = useState(false);
-  const [newExam, setNewExam] = useState({ name: '', date: '', total_questions: 100 });
   const [bulkSelected, setBulkSelected] = useState([]);
+
+  // Form states (common for Add and Edit)
+  const [form, setForm] = useState({
+    name: '',
+    slug: '',
+    status: 'active',
+    full_name: '',
+    year: '2025',
+    date: '',
+    total_questions: 100,
+    icon: '📋',
+    badge: 'Active',
+    color: 'from-indigo-600/20 to-purple-600/20',
+    border: 'border-indigo-700/30',
+    badge_color: 'bg-indigo-900/60 text-indigo-400 border-indigo-700/50',
+    theme_color: 'indigo',
+    conducted_by: '',
+    body_text: '',
+    desc_card: '',
+    price: 0,
+    description: '',
+    disclaimer: '',
+    sections: '[]',
+    highlights: '[]',
+    features: '[]',
+    faq: '[]',
+    seo: '{}',
+    marketplace_config: '{}'
+  });
 
   useEffect(() => { fetchExams(); }, []);
 
   const fetchExams = async () => {
-    try { const res = await fetch(`${API}/exams`); const data = await res.json(); setExams(data.exams); } catch (e) { console.error(e); } finally { setLoading(false); }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/exams`);
+      const data = await res.json();
+      setExams(data.exams || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const startEdit = (exam) => {
+    setEditingExam(exam.id);
+    setForm({
+      name: exam.name || '',
+      slug: exam.slug || '',
+      status: exam.status || 'active',
+      full_name: exam.full_name || '',
+      year: exam.year || '',
+      date: exam.date ? exam.date.split('T')[0] : '',
+      total_questions: exam.total_questions || 100,
+      icon: exam.icon || '',
+      badge: exam.badge || '',
+      color: exam.color || '',
+      border: exam.border || '',
+      badge_color: exam.badge_color || '',
+      theme_color: exam.theme_color || 'indigo',
+      conducted_by: exam.conducted_by || '',
+      body_text: exam.body_text || '',
+      desc_card: exam.desc_card || '',
+      price: exam.price || 0,
+      description: exam.description || '',
+      disclaimer: exam.disclaimer || '',
+      sections: JSON.stringify(exam.sections || [], null, 2),
+      highlights: JSON.stringify(exam.highlights || [], null, 2),
+      features: JSON.stringify(exam.features || [], null, 2),
+      faq: JSON.stringify(exam.faq || [], null, 2),
+      seo: JSON.stringify(exam.seo || {}, null, 2),
+      marketplace_config: JSON.stringify(exam.marketplace_config || {}, null, 2)
+    });
+  };
+
+  const startAdd = () => {
+    setShowAdd(true);
+    setForm({
+      name: '',
+      slug: '',
+      status: 'active',
+      full_name: '',
+      year: '2025',
+      date: new Date().toISOString().split('T')[0],
+      total_questions: 100,
+      icon: '📋',
+      badge: 'Active',
+      color: 'from-indigo-600/20 to-purple-600/20',
+      border: 'border-indigo-700/30',
+      badge_color: 'bg-indigo-900/60 text-indigo-400 border-indigo-700/50',
+      theme_color: 'indigo',
+      conducted_by: '',
+      body_text: '',
+      desc_card: '',
+      price: 0,
+      description: '',
+      disclaimer: '',
+      sections: '[]',
+      highlights: '[]',
+      features: '[]',
+      faq: '[]',
+      seo: '{}',
+      marketplace_config: '{}'
+    });
+  };
+
+  const handleStatusToggle = async (exam) => {
+    const newStatus = exam.status === 'active' ? 'paused' : 'active';
+    try {
+      const res = await fetch(`${API}/exams/${exam.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        fetchExams();
+      } else {
+        alert("Failed to toggle status");
+      }
+    } catch (e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  const deleteExam = async (id) => {
+    if (!confirm('Delete this exam? Related results will be deleted.')) return;
+    try {
+      const res = await fetch(`${API}/exams/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchExams();
+      } else {
+        alert("Failed to delete exam");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const runBulkDeleteExams = async () => {
     if (bulkSelected.length === 0) return;
     if (!confirm(`Delete ${bulkSelected.length} exams? Related results will be deleted.`)) return;
-    try { const res = await fetch(`${API}/exams/bulk-delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: bulkSelected }) }); const data = await res.json(); if (data.success) { alert(`${data.deleted} Exams deleted`); setBulkSelected([]); fetchExams(); } else alert('Error: ' + (data.error || '')); } catch (e) { alert('Delete failed'); }
+    try {
+      const res = await fetch(`${API}/exams/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: bulkSelected })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`${data.deleted} Exams deleted`);
+        setBulkSelected([]);
+        fetchExams();
+      } else {
+        alert('Error: ' + (data.error || ''));
+      }
+    } catch (e) {
+      alert('Delete failed');
+    }
   };
-  const addExam = async e => {
+
+  const handleSave = async (e) => {
     e.preventDefault();
-    try { await fetch(`${API}/exams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newExam) }); setShowAdd(false); setNewExam({ name: '', date: '', total_questions: 100 }); fetchExams(); } catch (e) { console.error(e); }
-  };
-  const deleteExam = async id => {
-    if (!confirm('Delete this exam? Related results will be deleted.')) return;
-    try { await fetch(`${API}/exams/${id}`, { method: 'DELETE' }); fetchExams(); } catch (e) { console.error(e); }
+    
+    // Parse and validate JSON fields
+    let parsedSections, parsedHighlights, parsedFeatures, parsedFaq, parsedSeo, parsedMarketplaceConfig;
+    try {
+      parsedSections = JSON.parse(form.sections);
+      parsedHighlights = JSON.parse(form.highlights);
+      parsedFeatures = JSON.parse(form.features);
+      parsedFaq = JSON.parse(form.faq);
+      parsedSeo = JSON.parse(form.seo);
+      parsedMarketplaceConfig = JSON.parse(form.marketplace_config);
+    } catch (err) {
+      alert("Invalid JSON in advanced fields! Please check syntax of FAQs, SEO, highlights, etc.\nError: " + err.message);
+      return;
+    }
+
+    const payload = {
+      name: form.name,
+      slug: form.slug,
+      status: form.status,
+      full_name: form.full_name,
+      year: form.year,
+      date: form.date,
+      total_questions: Number(form.total_questions),
+      icon: form.icon,
+      badge: form.badge,
+      color: form.color,
+      border: form.border,
+      badge_color: form.badge_color,
+      theme_color: form.theme_color,
+      conducted_by: form.conducted_by,
+      body_text: form.body_text,
+      desc_card: form.desc_card,
+      price: Number(form.price),
+      description: form.description,
+      disclaimer: form.disclaimer,
+      sections: parsedSections,
+      highlights: parsedHighlights,
+      features: parsedFeatures,
+      faq: parsedFaq,
+      seo: parsedSeo,
+      marketplace_config: parsedMarketplaceConfig
+    };
+
+    try {
+      const url = editingExam ? `${API}/exams/${editingExam}` : `${API}/exams`;
+      const method = editingExam ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingExam(null);
+        setShowAdd(false);
+        fetchExams();
+      } else {
+        alert(data.error || "Failed to save exam");
+      }
+    } catch (err) {
+      alert("Network error: " + err.message);
+    }
   };
 
   return (
     <div>
-      <PageHeader title="Exams" subtitle={`${exams.length} total`}>
-        {bulkSelected.length > 0 && <div className="flex items-center gap-2"><span className="text-xs text-[rgb(var(--primary))]">{bulkSelected.length} selected</span><button onClick={runBulkDeleteExams} className="btn-destructive btn-sm">Bulk Delete</button><button onClick={() => setBulkSelected([])} className="btn-ghost btn-sm">Clear</button></div>}
-        <button onClick={() => setShowAdd(true)} className="btn-primary"><FaPlus size={14} /> New Exam</button>
-      </PageHeader>
-      {showAdd && (
-        <motion.form initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} onSubmit={addExam} className="card p-4 mb-4 space-y-3 border-l-2 border-l-emerald-500">
-          <h3 className="text-sm font-semibold">Add New Exam</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2"><input value={newExam.name} onChange={e => setNewExam({ ...newExam, name: e.target.value })} className="input h-9" placeholder="Exam name" required /><input type="date" value={newExam.date} onChange={e => setNewExam({ ...newExam, date: e.target.value })} className="input h-9" /><input type="number" value={newExam.total_questions} onChange={e => setNewExam({ ...newExam, total_questions: parseInt(e.target.value) || 100 })} className="input h-9" placeholder="Total questions" /></div>
-          <div className="flex gap-2"><button type="submit" className="btn-primary btn-sm">Save</button><button type="button" onClick={() => setShowAdd(false)} className="btn-ghost btn-sm">Cancel</button></div>
+      {/* Page Header */}
+      {!editingExam && !showAdd ? (
+        <>
+          <PageHeader title="Exams" subtitle={`${exams.length} total`}>
+            {bulkSelected.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[rgb(var(--primary))]">{bulkSelected.length} selected</span>
+                <button onClick={runBulkDeleteExams} className="btn-destructive btn-sm">Bulk Delete</button>
+                <button onClick={() => setBulkSelected([])} className="btn-ghost btn-sm">Clear</button>
+              </div>
+            )}
+            <button onClick={startAdd} className="btn-primary"><FaPlus size={14} /> New Exam</button>
+          </PageHeader>
+
+          {/* Listing Table */}
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[rgb(var(--border))]">
+                  <th className="table-header w-10">
+                    <input
+                      type="checkbox"
+                      onChange={e => {
+                        if (e.target.checked) setBulkSelected(exams.map(ex => ex.id));
+                        else setBulkSelected([]);
+                      }}
+                      checked={exams.length > 0 && bulkSelected.length === exams.length}
+                      className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]"
+                    />
+                  </th>
+                  <th className="table-header">ID</th>
+                  <th className="table-header">Name</th>
+                  <th className="table-header">Slug / URL</th>
+                  <th className="table-header">Status</th>
+                  <th className="table-header">Questions</th>
+                  <th className="table-header">Results</th>
+                  <th className="table-header">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan="8" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr>
+                ) : exams.length === 0 ? (
+                  <tr><td colSpan="8" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No exams found.</td></tr>
+                ) : exams.map(e => {
+                  const statusColors = {
+                    active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+                    paused: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+                    'coming-soon': 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+                    draft: 'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                  };
+                  return (
+                    <tr key={e.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors">
+                      <td className="table-cell">
+                        <input
+                          type="checkbox"
+                          checked={bulkSelected.includes(e.id)}
+                          onChange={() => setBulkSelected(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id])}
+                          className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]"
+                        />
+                      </td>
+                      <td className="table-cell text-[rgb(var(--muted-foreground))] font-mono">#{e.id}</td>
+                      <td className="table-cell font-medium">
+                        <span className="mr-2 text-base">{e.icon || '📋'}</span>
+                        {e.name} <span className="text-xs text-[rgb(var(--muted-foreground))] font-normal">({e.year || '2025'})</span>
+                      </td>
+                      <td className="table-cell font-mono text-xs text-[rgb(var(--muted-foreground))]">/exams/{e.slug}</td>
+                      <td className="table-cell">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusColors[e.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/30'}`}>
+                          {e.status}
+                        </span>
+                      </td>
+                      <td className="table-cell"><span className="badge-info">{e.total_questions}</span></td>
+                      <td className="table-cell text-[rgb(var(--muted-foreground))]">{e.results_count}</td>
+                      <td className="table-cell">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleStatusToggle(e)}
+                            className={`btn-ghost p-1 text-xs ${e.status === 'active' ? 'text-amber-400' : 'text-emerald-400'}`}
+                            title={e.status === 'active' ? "Pause Exam" : "Activate Exam"}
+                          >
+                            {e.status === 'active' ? "Pause" : "Activate"}
+                          </button>
+                          <button type="button" onClick={() => startEdit(e)} className="btn-ghost p-1.5 text-indigo-400" title="Edit Exam"><FaEdit size={14} /></button>
+                          <button type="button" onClick={() => deleteExam(e.id)} className="btn-ghost p-1.5 text-red-400" title="Delete Exam"><FaTrash size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        /* Edit / Create Form */
+        <motion.form initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} onSubmit={handleSave} className="space-y-6 pb-12">
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => { setEditingExam(null); setShowAdd(false); }} className="btn-ghost text-sm">
+              <FaArrowLeft className="mr-1.5" /> Back to Exams
+            </button>
+            <h2 className="text-lg font-bold">{editingExam ? "Edit Exam Settings" : "Create New Exam"}</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left/Middle Columns - Settings fields */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* General Settings */}
+              <div className="card p-5 space-y-4">
+                <h3 className="text-sm font-semibold border-b border-[rgb(var(--border))] pb-2">General Settings</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label text-xs">Exam Name (e.g. RRB NTPC UG)</label>
+                    <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input mt-1.5" required />
+                  </div>
+                  <div>
+                    <label className="label text-xs">URL Slug (e.g. rrb-ntpc-ug)</label>
+                    <input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} className="input mt-1.5" required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label text-xs">Full/Official Name</label>
+                    <input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} className="input mt-1.5" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Exam Year (e.g. 2025)</label>
+                    <input value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} className="input mt-1.5" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="label text-xs">Status</label>
+                    <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="input mt-1.5">
+                      <option value="active">Active</option>
+                      <option value="paused">Paused</option>
+                      <option value="coming-soon">Coming Soon</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label text-xs">Date</label>
+                    <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="input mt-1.5" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Total Questions</label>
+                    <input type="number" value={form.total_questions} onChange={e => setForm({ ...form, total_questions: parseInt(e.target.value) || 0 })} className="input mt-1.5" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="label text-xs">Icon Emoji (e.g. 🚂)</label>
+                    <input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} className="input mt-1.5" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Badge Label (e.g. Active)</label>
+                    <input value={form.badge} onChange={e => setForm({ ...form, badge: e.target.value })} className="input mt-1.5" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Conducted By (e.g. RRB)</label>
+                    <input value={form.conducted_by} onChange={e => setForm({ ...form, conducted_by: e.target.value })} className="input mt-1.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Aesthetics & Styling */}
+              <div className="card p-5 space-y-4">
+                <h3 className="text-sm font-semibold border-b border-[rgb(var(--border))] pb-2">Branding & Visuals</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label text-xs">Theme Color Token</label>
+                    <select value={form.theme_color} onChange={e => setForm({ ...form, theme_color: e.target.value })} className="input mt-1.5">
+                      <option value="indigo">Indigo</option>
+                      <option value="red">Red</option>
+                      <option value="blue">Blue</option>
+                      <option value="teal">Teal</option>
+                      <option value="amber">Amber</option>
+                      <option value="purple">Purple</option>
+                      <option value="orange">Orange</option>
+                      <option value="pink">Pink</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label text-xs">Badge Style (Tailwind classes)</label>
+                    <input value={form.badge_color} onChange={e => setForm({ ...form, badge_color: e.target.value })} className="input mt-1.5" placeholder="e.g. bg-green-900 text-green-400" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label text-xs">Color Gradient (Tailwind classes)</label>
+                    <input value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="input mt-1.5" placeholder="e.g. from-red-600/20 to-orange-600/20" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">Border Class (Tailwind classes)</label>
+                    <input value={form.border} onChange={e => setForm({ ...form, border: e.target.value })} className="input mt-1.5" placeholder="e.g. border-red-700/30" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Descriptions / Content */}
+              <div className="card p-5 space-y-4">
+                <h3 className="text-sm font-semibold border-b border-[rgb(var(--border))] pb-2">Page Copy & Content</h3>
+                <div>
+                  <label className="label text-xs">Hero Title Subtitle / Description (1-2 lines)</label>
+                  <textarea value={form.body_text} onChange={e => setForm({ ...form, body_text: e.target.value })} className="textarea mt-1.5 h-20" />
+                </div>
+                <div>
+                  <label className="label text-xs">Listing Card Summary Description (shorter)</label>
+                  <textarea value={form.desc_card} onChange={e => setForm({ ...form, desc_card: e.target.value })} className="textarea mt-1.5 h-20" />
+                </div>
+              </div>
+
+              {/* Marketplace / Price config */}
+              <div className="card p-5 space-y-4">
+                <h3 className="text-sm font-semibold border-b border-[rgb(var(--border))] pb-2">Marketplace & Legal</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label text-xs">Points/Price Required (0 = Free)</label>
+                    <input type="number" value={form.price} onChange={e => setForm({ ...form, price: parseInt(e.target.value) || 0 })} className="input mt-1.5" />
+                  </div>
+                </div>
+                <div>
+                  <label className="label text-xs">Marketplace Folder Description</label>
+                  <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="textarea mt-1.5 h-20" placeholder="Description of the question bank pack..." />
+                </div>
+                <div>
+                  <label className="label text-xs">Custom Disclaimer</label>
+                  <textarea value={form.disclaimer} onChange={e => setForm({ ...form, disclaimer: e.target.value })} className="textarea mt-1.5 h-20" placeholder="e.g. Unofficial predictor not affiliated with..." />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Advanced JSON editors */}
+            <div className="space-y-6">
+              <div className="card p-5 space-y-4">
+                <h3 className="text-sm font-semibold border-b border-[rgb(var(--border))] pb-2 text-indigo-400">Structured Data (JSON)</h3>
+                
+                <div>
+                  <label className="label text-xs font-mono">Sections Array (e.g. sections/topics)</label>
+                  <textarea value={form.sections} onChange={e => setForm({ ...form, sections: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-28 leading-snug" />
+                </div>
+                
+                <div>
+                  <label className="label text-xs font-mono">Highlights (Key-Value array)</label>
+                  <textarea value={form.highlights} onChange={e => setForm({ ...form, highlights: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-28 leading-snug" />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-mono">Features Array</label>
+                  <textarea value={form.features} onChange={e => setForm({ ...form, features: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-24 leading-snug" />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-mono">FAQs Array (q and a)</label>
+                  <textarea value={form.faq} onChange={e => setForm({ ...form, faq: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-32 leading-snug" />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-mono">SEO Metadata Object</label>
+                  <textarea value={form.seo} onChange={e => setForm({ ...form, seo: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-32 leading-snug" />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-mono">Marketplace Info JSON</label>
+                  <textarea value={form.marketplace_config} onChange={e => setForm({ ...form, marketplace_config: e.target.value })} className="textarea font-mono text-[10px] mt-1.5 h-24 leading-snug" />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button type="submit" className="btn-primary flex-1 py-2.5">Save Changes</button>
+                <button type="button" onClick={() => { setEditingExam(null); setShowAdd(false); }} className="btn-ghost flex-1 py-2.5">Cancel</button>
+              </div>
+            </div>
+          </div>
         </motion.form>
       )}
-      <div className="card overflow-x-auto">
-        <table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header w-10"><input type="checkbox" onChange={e => { if (e.target.checked) setBulkSelected(exams.map(ex => ex.id)); else setBulkSelected([]); }} checked={exams.length > 0 && bulkSelected.length === exams.length} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></th><th className="table-header">ID</th><th className="table-header">Name</th><th className="table-header">Date</th><th className="table-header">Questions</th><th className="table-header">Results</th><th className="table-header">Actions</th></tr></thead>
-          <tbody>{loading ? <tr><td colSpan="7" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : exams.length === 0 ? <tr><td colSpan="7" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No exams found.</td></tr> : exams.map(e => (
-            <tr key={e.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors"><td className="table-cell"><input type="checkbox" checked={bulkSelected.includes(e.id)} onChange={() => setBulkSelected(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id])} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></td><td className="table-cell text-[rgb(var(--muted-foreground))] font-mono">#{e.id}</td><td className="table-cell font-medium">{e.name}</td><td className="table-cell text-[rgb(var(--muted-foreground))]">{e.date ? new Date(e.date).toLocaleDateString() : '\u2014'}</td><td className="table-cell"><span className="badge-info">{e.total_questions}</span></td><td className="table-cell text-[rgb(var(--muted-foreground))]">{e.results_count}</td><td className="table-cell"><button onClick={() => deleteExam(e.id)} className="btn-ghost p-1.5 text-red-400"><FaTrash size={14} /></button></td></tr>
-          ))}</tbody>
-        </table>
-      </div>
     </div>
   );
 }
@@ -981,8 +1466,7 @@ function PointsPacks() {
             <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin pr-1">{packs.map(p => (
               <div key={p.id} className="rounded-lg border border-[rgb(var(--border))] p-3 hover:border-[rgb(var(--muted-foreground))/0.3] transition-colors">
                 <div className="flex items-start justify-between gap-2"><div className="min-w-0 flex-1"><p className="text-sm font-medium truncate">{p.name}</p><p className="text-xs text-[rgb(var(--muted-foreground))] truncate">{p.description || ''}</p></div><div className="flex gap-1 shrink-0"><button onClick={() => { setEditingId(p.id); setForm({ name: p.name, price: p.price, points: p.points, description: p.description || '', is_active: p.is_active !== false }); }} className="btn-ghost p-1"><FaEdit size={12} /></button><button onClick={async () => { if (!confirm('Delete?')) return; try { await fetch(`${API}/points-packs/${p.id}`, { method: 'DELETE' }); fetchPacks(); } catch (e) { console.error(e); } }} className="btn-ghost p-1 text-red-400"><FaTrash size={12} /></button></div></div>
-                <div className="mt-2 flex items-center gap-2 text-xs"><span className="text-emerald-400 font-semibold">\u20B9{p.price}</span><span className="text-indigo-400 font-semibold">{p.points} pts</span><span className={p.is_active ? 'badge-success' : 'badge-destructive'}>{p.is_active ? 'Active' : 'Inactive'}</span></div>
-              </div>
+                </div>
             ))}</div>
           )}
         </div>
@@ -990,3 +1474,708 @@ function PointsPacks() {
     </div>
   );
 }
+
+
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'color': [] }, { 'background': [] }],
+    ['link', 'image', 'video'],
+    ['blockquote', 'code-block'],
+    ['clean']
+  ],
+};
+
+const quillFormats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'script',
+  'list', 'bullet',
+  'color', 'background',
+  'link', 'image', 'video',
+  'blockquote', 'code-block'
+];
+
+// ─── BLOG POSTS MANAGER ────────────────────────────────────────────────
+function Blog() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState('list'); // 'list', 'edit', 'new'
+  const [activePost, setActivePost] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form Fields
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [content, setContent] = useState('');
+  const [excerpt, setExcerpt] = useState('');
+  const [featuredImage, setFeaturedImage] = useState('');
+  const [status, setStatus] = useState('draft');
+  const [category, setCategory] = useState('General');
+  const [tags, setTags] = useState('');
+
+  // SEO Fields
+  const [metaTitle, setMetaTitle] = useState('');
+  const [metaDescription, setMetaDescription] = useState('');
+  const [metaKeywords, setMetaKeywords] = useState('');
+  const [focusKeyword, setFocusKeyword] = useState('');
+  const [canonicalUrl, setCanonicalUrl] = useState('');
+  const [ogTitle, setOgTitle] = useState('');
+  const [ogDescription, setOgDescription] = useState('');
+  const [ogImage, setOgImage] = useState('');
+
+  // AI Widget state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiAction, setAiAction] = useState('generate'); // 'generate', 'rewrite', 'seo'
+  const [aiResult, setAiResult] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Search filter
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/blog`);
+      const data = await res.json();
+      setPosts(Array.isArray(data.posts) ? data.posts : []);
+    } catch (e) {
+      console.error('Error fetching blog posts:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (post) => {
+    setActivePost(post);
+    setTitle(post.title);
+    setSlug(post.slug);
+    setContent(post.content);
+    setExcerpt(post.excerpt);
+    setFeaturedImage(post.featured_image);
+    setStatus(post.status);
+    setCategory(post.category);
+    setTags(post.tags);
+    setMetaTitle(post.meta_title);
+    setMetaDescription(post.meta_description);
+    setMetaKeywords(post.meta_keywords);
+    setFocusKeyword(post.focus_keyword);
+    setCanonicalUrl(post.canonical_url);
+    setOgTitle(post.og_title);
+    setOgDescription(post.og_description);
+    setOgImage(post.og_image);
+    
+    setAiResult('');
+    setView('edit');
+  };
+
+  const handleNew = () => {
+    setActivePost(null);
+    setTitle('');
+    setSlug('');
+    setContent('');
+    setExcerpt('');
+    setFeaturedImage('');
+    setStatus('draft');
+    setCategory('General');
+    setTags('');
+    setMetaTitle('');
+    setMetaDescription('');
+    setMetaKeywords('');
+    setFocusKeyword('');
+    setCanonicalUrl('');
+    setOgTitle('');
+    setOgDescription('');
+    setOgImage('');
+    
+    setAiResult('');
+    setView('new');
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) return alert('Title is required');
+    setSubmitting(true);
+
+    const payload = {
+      title,
+      slug,
+      content,
+      excerpt,
+      featured_image: featuredImage,
+      status,
+      category,
+      tags,
+      meta_title: metaTitle,
+      meta_description: metaDescription,
+      meta_keywords: metaKeywords,
+      focus_keyword: focusKeyword,
+      canonical_url: canonicalUrl,
+      og_title: ogTitle,
+      og_description: ogDescription,
+      og_image: ogImage,
+    };
+
+    try {
+      const url = activePost ? `${API}/blog/${activePost.id}` : `${API}/blog`;
+      const method = activePost ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setView('list');
+        fetchPosts();
+      } else {
+        alert(data.error || 'Failed to save blog post');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while saving');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this blog post?')) return;
+    try {
+      const res = await fetch(`${API}/blog/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchPosts();
+      } else {
+        alert(data.error || 'Failed to delete');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Delete failed');
+    }
+  };
+
+  const handleAiAction = async () => {
+    if (aiAction === 'generate' && !aiPrompt.trim()) {
+      return alert('Please enter an AI prompt to write content');
+    }
+    if (aiAction === 'rewrite' && !content.trim()) {
+      return alert('Please write some content first to rewrite');
+    }
+    if (aiAction === 'seo' && !title.trim()) {
+      return alert('Please provide an article title to generate SEO tags');
+    }
+
+    setAiLoading(true);
+    setAiResult('');
+
+    try {
+      const res = await fetch(`${API}/blog/ai-generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: aiAction,
+          prompt: aiPrompt,
+          content,
+          title,
+          focus_keyword: focusKeyword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (aiAction === 'seo') {
+          const seoData = data.result.data || {};
+          setMetaTitle(seoData.meta_title || '');
+          setMetaDescription(seoData.meta_description || '');
+          setMetaKeywords(seoData.meta_keywords || '');
+          setOgTitle(seoData.og_title || '');
+          setOgDescription(seoData.og_description || '');
+          setAiResult('✅ SEO Meta Tags generated and auto-applied successfully!');
+        } else {
+          setAiResult(data.result.text || '');
+        }
+      } else {
+        alert(data.error || 'AI request failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('AI connection error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // SEO Analyzer calculations
+  const getWordCount = () => {
+    return content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+  };
+
+  const getKeywordDensity = () => {
+    if (!focusKeyword || !content) return 0;
+    const regex = new RegExp(`\\b${focusKeyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+    const matches = content.match(regex);
+    const count = matches ? matches.length : 0;
+    const words = getWordCount();
+    return words > 0 ? ((count / words) * 100).toFixed(1) : 0;
+  };
+
+  const isKeywordInTitle = () => {
+    if (!focusKeyword || !title) return false;
+    return title.toLowerCase().includes(focusKeyword.toLowerCase());
+  };
+
+  const isKeywordInDescription = () => {
+    if (!focusKeyword || !metaDescription) return false;
+    return metaDescription.toLowerCase().includes(focusKeyword.toLowerCase());
+  };
+
+  const filteredPosts = posts.filter(p => 
+    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div>
+      <PageHeader 
+        title="Blog Manager" 
+        subtitle="Write, edit, and optimize articles with WordPress-style features & Gemini AI"
+      >
+        {view === 'list' && (
+          <button onClick={handleNew} className="btn-primary btn-sm flex items-center gap-1.5 shadow-sm">
+            <FaPlus className="text-xs" /> New Article
+          </button>
+        )}
+      </PageHeader>
+
+      {view === 'list' ? (
+        <div className="space-y-4">
+          {/* Search bar */}
+          <div className="relative max-w-md">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--muted-foreground))] w-3.5 h-3.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="input pl-9 h-9"
+              placeholder="Search posts..."
+            />
+          </div>
+
+          <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-[rgb(var(--border))] bg-[rgb(var(--accent))] text-[rgb(var(--muted-foreground))] font-medium">
+                    <th className="p-3">Title</th>
+                    <th className="p-3">Category</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgb(var(--border))]">
+                  {loading ? (
+                    [1, 2, 3].map(i => (
+                      <tr key={i}>
+                        <td colSpan="5" className="p-4 text-center">
+                          <div className="skeleton h-5 w-3/4 mx-auto rounded" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredPosts.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="p-8 text-center text-[rgb(var(--muted-foreground))]">
+                        No articles found. Click "New Article" to write your first post!
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPosts.map(p => (
+                      <tr key={p.id} className="hover:bg-[rgb(var(--accent))/0.2] transition">
+                        <td className="p-3 font-semibold text-[rgb(var(--foreground))]">
+                          <div>
+                            <p className="hover:text-[rgb(var(--primary))] cursor-pointer truncate max-w-sm" onClick={() => handleEdit(p)}>
+                              {p.title}
+                            </p>
+                            <p className="text-[10px] text-[rgb(var(--muted-foreground))] truncate">/{p.slug}</p>
+                          </div>
+                        </td>
+                        <td className="p-3 text-[rgb(var(--muted-foreground))]">{p.category}</td>
+                        <td className="p-3">
+                          <span className={p.status === 'published' ? 'badge-success' : 'badge-destructive'}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-xs text-[rgb(var(--muted-foreground))]">
+                          {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <button onClick={() => handleEdit(p)} className="btn-ghost p-1.5" title="Edit">
+                              <FaEdit size={14} />
+                            </button>
+                            {p.status === 'published' && (
+                              <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer" className="btn-ghost p-1.5 text-blue-400" title="View Public Post">
+                                <FaEye size={14} />
+                              </a>
+                            )}
+                            <button onClick={() => handleDelete(p.id)} className="btn-ghost p-1.5 text-red-400" title="Delete">
+                              <FaTrash size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="flex justify-between gap-3 flex-wrap">
+            <button type="button" onClick={() => setView('list')} className="btn-ghost btn-sm flex items-center gap-1">
+              ← Back to List
+            </button>
+            <div className="flex gap-2">
+              <select
+                value={status}
+                onChange={e => setStatus(e.target.value)}
+                className="input h-9 py-1 px-3 text-xs font-bold"
+              >
+                <option value="draft">Save as Draft 📝</option>
+                <option value="published">Publish Article 🚀</option>
+              </select>
+              <button type="submit" disabled={submitting} className="btn-primary btn-sm flex items-center gap-1.5">
+                <FaSave /> {submitting ? 'Saving...' : 'Save Post'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left Main Editor Area */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="card p-5 space-y-4">
+                <div>
+                  <label className="label text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Article Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={e => {
+                      setTitle(e.target.value);
+                      if (!activePost) {
+                        setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                      }
+                    }}
+                    className="input font-extrabold text-base"
+                    placeholder="Enter post title..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Custom Slug</label>
+                  <input
+                    type="text"
+                    value={slug}
+                    onChange={e => setSlug(e.target.value)}
+                    className="input text-xs"
+                    placeholder="post-url-slug"
+                  />
+                </div>
+
+                <div>
+                  <label className="label text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Article Excerpt</label>
+                  <textarea
+                    value={excerpt}
+                    onChange={e => setExcerpt(e.target.value)}
+                    className="textarea text-xs h-16"
+                    placeholder="Provide a brief summary/excerpt of the post..."
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="label text-xs font-bold uppercase tracking-wider text-slate-400">Content Editor (WYSIWYG)</label>
+                    <span className="text-[10px] font-bold text-indigo-600">Rich text enabled</span>
+                  </div>
+                  <div className="prose max-w-none">
+                    <ReactQuill
+                      value={content}
+                      onChange={setContent}
+                      modules={quillModules}
+                      formats={quillFormats}
+                      className="bg-white rounded-xl overflow-hidden shadow-sm h-[320px] pb-12"
+                      placeholder="Write your article with formatting..."
+                      theme="snow"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Gemini AI Writing Box */}
+              <div className="card p-5 border border-indigo-100 bg-indigo-50/10 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white text-xs">
+                    <FaRobot />
+                  </div>
+                  <h3 className="font-extrabold text-indigo-950 text-sm">Gemini AI Editor Assistant</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAiAction('generate')}
+                    className={cn(
+                      'py-2 px-3 rounded-xl border text-xs font-bold text-center transition',
+                      aiAction === 'generate' ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    )}
+                  >
+                    ✨ Write Section
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiAction('rewrite')}
+                    className={cn(
+                      'py-2 px-3 rounded-xl border text-xs font-bold text-center transition',
+                      aiAction === 'rewrite' ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    )}
+                  >
+                    ✍️ Rewrite Selected
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiAction('seo')}
+                    className={cn(
+                      'py-2 px-3 rounded-xl border text-xs font-bold text-center transition',
+                      aiAction === 'seo' ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    )}
+                  >
+                    📊 Autofill SEO Meta
+                  </button>
+                </div>
+
+                {aiAction !== 'seo' && (
+                  <div>
+                    <label className="label text-[10px] font-bold text-indigo-950 mb-1">
+                      AI Instructions / Topic
+                    </label>
+                    <input
+                      type="text"
+                      value={aiPrompt}
+                      onChange={e => setAiPrompt(e.target.value)}
+                      className="input text-xs"
+                      placeholder={aiAction === 'generate' ? "e.g., Explain SSC CGL syllabus breakdown" : "e.g., Make it read more formally and extend length"}
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAiAction}
+                  disabled={aiLoading}
+                  className="btn-primary w-full btn-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-100"
+                >
+                  <FaMagic /> {aiLoading ? 'AI is processing content...' : 'Generate with Gemini AI'}
+                </button>
+
+                {aiResult && (
+                  <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm space-y-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Suggestion</p>
+                    <div className="text-xs text-slate-700 leading-relaxed font-mono bg-slate-50 p-3 rounded-xl max-h-48 overflow-y-auto whitespace-pre-wrap">
+                      {aiResult}
+                    </div>
+                    {aiAction !== 'seo' && !aiResult.startsWith('❌') && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContent(prev => prev + '\n\n' + aiResult);
+                            setAiResult('');
+                          }}
+                          className="btn-primary btn-sm py-1.5 text-[10px]"
+                        >
+                          Append to Content
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContent(aiResult);
+                            setAiResult('');
+                          }}
+                          className="btn-secondary btn-sm py-1.5 text-[10px]"
+                        >
+                          Replace Entire Content
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Settings Sidebar */}
+            <div className="space-y-4">
+              
+              {/* Category & Tags Box */}
+              <div className="card p-5 space-y-4">
+                <h3 className="font-extrabold text-sm text-indigo-950 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                  <FaBook /> Settings
+                </h3>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Category</label>
+                  <select
+                    value={category}
+                    onChange={e => setCategory(e.target.value)}
+                    className="input h-9 px-3 text-xs"
+                  >
+                    <option value="General">General</option>
+                    <option value="Exam Updates">Exam Updates</option>
+                    <option value="Prep Tips">Prep Tips</option>
+                    <option value="Question Banks">Question Banks</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tags</label>
+                  <input
+                    type="text"
+                    value={tags}
+                    onChange={e => setTags(e.target.value)}
+                    className="input text-xs"
+                    placeholder="ssc, rrb, cgl, 2025"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1">Separate tags with commas</p>
+                </div>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Featured Image URL</label>
+                  <input
+                    type="url"
+                    value={featuredImage}
+                    onChange={e => setFeaturedImage(e.target.value)}
+                    className="input text-xs"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+              </div>
+
+              {/* SEO Tags Box */}
+              <div className="card p-5 space-y-4">
+                <h3 className="font-extrabold text-sm text-indigo-950 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                  <FaGlobe /> SEO Meta Settings
+                </h3>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Meta Title</label>
+                  <input
+                    type="text"
+                    value={metaTitle}
+                    onChange={e => setMetaTitle(e.target.value)}
+                    className="input text-xs"
+                    placeholder="Meta Title tag"
+                  />
+                </div>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Meta Description</label>
+                  <textarea
+                    value={metaDescription}
+                    onChange={e => setMetaDescription(e.target.value)}
+                    className="textarea text-xs h-16"
+                    placeholder="Meta description summary"
+                  />
+                </div>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Focus Keyword</label>
+                  <input
+                    type="text"
+                    value={focusKeyword}
+                    onChange={e => setFocusKeyword(e.target.value)}
+                    className="input text-xs"
+                    placeholder="e.g., SSC CGL Exam Details"
+                  />
+                </div>
+
+                <div>
+                  <label className="label text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Canonical URL</label>
+                  <input
+                    type="url"
+                    value={canonicalUrl}
+                    onChange={e => setCanonicalUrl(e.target.value)}
+                    className="input text-xs"
+                    placeholder="https://rankveda.in/blog/post-name"
+                  />
+                </div>
+              </div>
+
+              {/* SEO Analyzer Checklist */}
+              <div className="card p-5 space-y-4">
+                <h3 className="font-extrabold text-sm text-indigo-950 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                  <FaChartBar /> Real-time SEO Analyzer
+                </h3>
+
+                <div className="space-y-2 text-xs font-semibold">
+                  <div className="flex items-center justify-between py-1">
+                    <span>Word Count</span>
+                    <span className={cn(
+                      'font-bold',
+                      getWordCount() >= 300 ? 'text-emerald-600' : 'text-orange-500'
+                    )}>
+                      {getWordCount()} words
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <span>Keyword Density</span>
+                    <span className={cn(
+                      'font-bold',
+                      getKeywordDensity() >= 1 && getKeywordDensity() <= 2.5 ? 'text-emerald-600' : 'text-orange-500'
+                    )}>
+                      {getKeywordDensity()}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <span>Keyword in Title?</span>
+                    <span>
+                      {isKeywordInTitle() ? (
+                        <span className="text-emerald-600 flex items-center gap-1">Yes ✅</span>
+                      ) : (
+                        <span className="text-orange-500 flex items-center gap-1">No ✕</span>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <span>Keyword in Meta Desc?</span>
+                    <span>
+                      {isKeywordInDescription() ? (
+                        <span className="text-emerald-600 flex items-center gap-1">Yes ✅</span>
+                      ) : (
+                        <span className="text-orange-500 flex items-center gap-1">No ✕</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+

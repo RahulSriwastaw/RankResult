@@ -14,6 +14,56 @@ class Exam(db.Model):
     price = db.Column(db.Integer, default=0)  # Points required to access question bank
     description = db.Column(db.Text)  # Marketplace description
     disclaimer = db.Column(db.Text)  # Custom legal disclaimer
+    
+    slug = db.Column(db.String(100), unique=True, index=True, nullable=True)
+    status = db.Column(db.String(50), default='active')  # 'active', 'paused', 'coming-soon', 'draft'
+    full_name = db.Column(db.String(200))
+    year = db.Column(db.String(50))
+    icon = db.Column(db.String(50))
+    badge = db.Column(db.String(50))
+    color = db.Column(db.String(200))
+    border = db.Column(db.String(200))
+    badge_color = db.Column(db.String(200))
+    theme_color = db.Column(db.String(50))
+    conducted_by = db.Column(db.String(200))
+    body_text = db.Column(db.Text)
+    desc_card = db.Column(db.Text)
+    sections = db.Column(db.JSON)
+    highlights = db.Column(db.JSON)
+    features = db.Column(db.JSON)
+    faq = db.Column(db.JSON)
+    seo = db.Column(db.JSON)
+    marketplace_config = db.Column(db.JSON)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'slug': self.slug or f"exam-{self.id}",
+            'name': self.name,
+            'date': self.date.isoformat() if self.date else None,
+            'total_questions': self.total_questions,
+            'price': self.price or 0,
+            'description': self.description or '',
+            'disclaimer': self.disclaimer or '',
+            'status': self.status or 'active',
+            'full_name': self.full_name or '',
+            'year': self.year or '',
+            'icon': self.icon or '📋',
+            'badge': self.badge or '',
+            'color': self.color or '',
+            'border': self.border or '',
+            'badge_color': self.badge_color or '',
+            'theme_color': self.theme_color or 'indigo',
+            'conducted_by': self.conducted_by or '',
+            'body_text': self.body_text or '',
+            'desc_card': self.desc_card or '',
+            'sections': self.sections or [],
+            'highlights': self.highlights or [],
+            'features': self.features or [],
+            'faq': self.faq or [],
+            'seo': self.seo or {},
+            'marketplace_config': self.marketplace_config or {}
+        }
 
     def __repr__(self):
         return f'<Exam {self.name}>'
@@ -408,4 +458,54 @@ class PointsPack(db.Model):
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class BlogPost(db.Model):
+    __tablename__ = 'blog_posts'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(250), nullable=False)
+    slug = db.Column(db.String(250), unique=True, index=True, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    excerpt = db.Column(db.Text)
+    featured_image = db.Column(db.String(500))
+    status = db.Column(db.String(50), default='draft')  # 'draft', 'published'
+    category = db.Column(db.String(100), default='General')
+    tags = db.Column(db.String(250), default='')
+    
+    # SEO fields
+    meta_title = db.Column(db.String(250))
+    meta_description = db.Column(db.Text)
+    meta_keywords = db.Column(db.String(250))
+    focus_keyword = db.Column(db.String(100))
+    canonical_url = db.Column(db.String(500))
+    og_title = db.Column(db.String(250))
+    og_description = db.Column(db.Text)
+    og_image = db.Column(db.String(500))
+    
+    created_at = db.Column(db.DateTime, default=utcnow)
+    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'slug': self.slug,
+            'content': self.content,
+            'excerpt': self.excerpt or '',
+            'featured_image': self.featured_image or '',
+            'status': self.status,
+            'category': self.category or 'General',
+            'tags': self.tags or '',
+            'meta_title': self.meta_title or '',
+            'meta_description': self.meta_description or '',
+            'meta_keywords': self.meta_keywords or '',
+            'focus_keyword': self.focus_keyword or '',
+            'canonical_url': self.canonical_url or '',
+            'og_title': self.og_title or '',
+            'og_description': self.og_description or '',
+            'og_image': self.og_image or '',
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 

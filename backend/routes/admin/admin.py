@@ -382,16 +382,7 @@ def list_exams():
     try:
         exams = Exam.query.order_by(desc(Exam.date)).all()
         return jsonify({
-            'exams': [{
-                'id': e.id,
-                'name': e.name,
-                'date': e.date.isoformat() if e.date else None,
-                'total_questions': e.total_questions,
-                'price': e.price or 0,
-                'description': e.description or '',
-                'disclaimer': e.disclaimer or '',
-                'results_count': ExamResult.query.filter_by(exam_id=e.id).count()
-            } for e in exams]
+            'exams': [dict(e.to_dict(), results_count=ExamResult.query.filter_by(exam_id=e.id).count()) for e in exams]
         })
     except Exception as e:
         print(traceback.format_exc())
@@ -402,7 +393,7 @@ def list_exams():
 def create_exam():
     """Create a new exam."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         if not data or not data.get('name'):
             return jsonify({'error': 'Exam name is required'}), 400
 
@@ -412,7 +403,26 @@ def create_exam():
             total_questions=data.get('total_questions', 100),
             price=data.get('price', 0),
             description=data.get('description', ''),
-            disclaimer=data.get('disclaimer', '')
+            disclaimer=data.get('disclaimer', ''),
+            slug=data.get('slug'),
+            status=data.get('status', 'active'),
+            full_name=data.get('full_name', ''),
+            year=data.get('year', ''),
+            icon=data.get('icon', ''),
+            badge=data.get('badge', ''),
+            color=data.get('color', ''),
+            border=data.get('border', ''),
+            badge_color=data.get('badge_color', ''),
+            theme_color=data.get('theme_color', 'indigo'),
+            conducted_by=data.get('conducted_by', ''),
+            body_text=data.get('body_text', ''),
+            desc_card=data.get('desc_card', ''),
+            sections=data.get('sections', []),
+            highlights=data.get('highlights', []),
+            features=data.get('features', []),
+            faq=data.get('faq', []),
+            seo=data.get('seo', {}),
+            marketplace_config=data.get('marketplace_config', {})
         )
         db.session.add(exam)
         db.session.commit()
@@ -429,7 +439,7 @@ def update_exam(exam_id):
     """Update an exam."""
     try:
         exam = Exam.query.get_or_404(exam_id)
-        data = request.get_json()
+        data = request.get_json() or {}
         if 'name' in data:
             exam.name = data['name']
         if 'date' in data:
@@ -442,6 +452,47 @@ def update_exam(exam_id):
             exam.description = data['description']
         if 'disclaimer' in data:
             exam.disclaimer = data['disclaimer']
+            
+        # New columns
+        if 'slug' in data:
+            exam.slug = data['slug']
+        if 'status' in data:
+            exam.status = data['status']
+        if 'full_name' in data:
+            exam.full_name = data['full_name']
+        if 'year' in data:
+            exam.year = data['year']
+        if 'icon' in data:
+            exam.icon = data['icon']
+        if 'badge' in data:
+            exam.badge = data['badge']
+        if 'color' in data:
+            exam.color = data['color']
+        if 'border' in data:
+            exam.border = data['border']
+        if 'badge_color' in data:
+            exam.badge_color = data['badge_color']
+        if 'theme_color' in data:
+            exam.theme_color = data['theme_color']
+        if 'conducted_by' in data:
+            exam.conducted_by = data['conducted_by']
+        if 'body_text' in data:
+            exam.body_text = data['body_text']
+        if 'desc_card' in data:
+            exam.desc_card = data['desc_card']
+        if 'sections' in data:
+            exam.sections = data['sections']
+        if 'highlights' in data:
+            exam.highlights = data['highlights']
+        if 'features' in data:
+            exam.features = data['features']
+        if 'faq' in data:
+            exam.faq = data['faq']
+        if 'seo' in data:
+            exam.seo = data['seo']
+        if 'marketplace_config' in data:
+            exam.marketplace_config = data['marketplace_config']
+
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:

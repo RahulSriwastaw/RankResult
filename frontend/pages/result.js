@@ -5,6 +5,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import MarksheetCard from '../components/MarksheetCard';
+import Logo from '../components/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaShareAlt, FaMoon, FaSun, FaCoins, FaChevronDown, FaChevronUp,
@@ -493,10 +494,8 @@ export default function ResultPage() {
 
       <div className="min-h-screen bg-gray-950 text-white">
         {/* NAV */}
-        <nav className="sticky top-0 z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-3 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-base sm:text-lg font-black gradient-text">⚡ RankVeda</span>
-          </Link>
+        <nav className="sticky top-0 z-50 bg-[#080b24]/95 backdrop-blur-md border-b border-indigo-900/40 px-4 py-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-lg">
+          <Logo size="sm" />
           <div className="flex items-center gap-2 flex-wrap">
             {authUser && <span className="text-xs text-gray-400 hidden sm:block">👤 {authUser.name}</span>}
             <button onClick={handleShare}

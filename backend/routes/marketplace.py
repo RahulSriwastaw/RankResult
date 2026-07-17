@@ -340,7 +340,7 @@ def pack_questions(pack_id):
         exam_map = {e.id: e.name for e in exams}
 
         query = MasterQuestion.query
-        search = request.args.get('search', '').strip()
+        search = (request.args.get('search') or '').strip()
         if search:
             pattern = f'%{search}%'
             query = query.filter(
@@ -353,21 +353,25 @@ def pack_questions(pack_id):
                 )
             )
 
-        if request.args.get('subject', '').strip():
-            query = query.filter(MasterQuestion.subject.ilike(f"%{request.args.get('subject').strip()}%"))
-        if request.args.get('chapter', '').strip():
-            query = query.filter(MasterQuestion.chapter.ilike(f"%{request.args.get('chapter').strip()}%"))
-        if request.args.get('difficulty', '').strip():
-            query = query.filter(MasterQuestion.difficulty.ilike(f"%{request.args.get('difficulty').strip()}%"))
-        if request.args.get('question_type', '').strip():
-            query = query.filter(MasterQuestion.question_type.ilike(f"%{request.args.get('question_type').strip()}%"))
+        subject = (request.args.get('subject') or '').strip()
+        if subject:
+            query = query.filter(MasterQuestion.subject.ilike(f"%{subject}%"))
+        chapter = (request.args.get('chapter') or '').strip()
+        if chapter:
+            query = query.filter(MasterQuestion.chapter.ilike(f"%{chapter}%"))
+        difficulty = (request.args.get('difficulty') or '').strip()
+        if difficulty:
+            query = query.filter(MasterQuestion.difficulty.ilike(f"%{difficulty}%"))
+        question_type = (request.args.get('question_type') or '').strip()
+        if question_type:
+            query = query.filter(MasterQuestion.question_type.ilike(f"%{question_type}%"))
 
         all_mqs = query.all()
         matched_items = []
         filter_exam_id = request.args.get('exam_id', type=int)
-        filter_date = request.args.get('shift_date', '').strip()
-        filter_time = request.args.get('shift_time', '').strip()
-        filter_shift_subject = request.args.get('shift_subject', '').strip()
+        filter_date = (request.args.get('shift_date') or '').strip()
+        filter_time = (request.args.get('shift_time') or '').strip()
+        filter_shift_subject = (request.args.get('shift_subject') or '').strip()
 
         for mq in all_mqs:
             matched_shifts = []

@@ -9,100 +9,101 @@ import {
   FaCheckCircle, FaLock
 } from 'react-icons/fa';
 import axios from 'axios';
-import { EXAMS, getExamBySlug, getAllSlugs } from '../../data/exams';
+import Navbar from '../../components/Navbar';
+import Logo from '../../components/Logo';
 
 const SITE_URL = 'https://rankveda.in';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// ─── Colour token map (themeColor → Tailwind classes) ────────────────────────
+// ─── Colour token map (themeColor → Tailwind classes for Light Theme) ────────
 const THEME = {
   indigo: {
-    badge: 'bg-indigo-950/50 border-indigo-800/50 text-indigo-400',
-    hero: 'from-indigo-900/20 via-transparent',
-    btn: 'from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500',
+    badge: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+    hero: 'from-indigo-50/50 via-white to-slate-50/30',
+    btn: 'from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 shadow-indigo-100',
     ring: 'focus:border-indigo-500 focus:ring-indigo-500/20',
-    icon: 'text-indigo-400',
-    dot: 'bg-indigo-500',
-    border: 'border-indigo-700/30',
-    crumb: 'text-indigo-400',
-    tag: 'bg-indigo-900/40 text-indigo-300',
+    icon: 'text-indigo-600',
+    dot: 'bg-indigo-600',
+    border: 'border-indigo-100',
+    crumb: 'text-indigo-600',
+    tag: 'bg-indigo-50/60 text-indigo-700 border-indigo-100/50',
   },
   red: {
-    badge: 'bg-red-950/50 border-red-800/50 text-red-400',
-    hero: 'from-red-900/20 via-transparent',
-    btn: 'from-red-700 via-red-600 to-orange-600 hover:from-red-600 hover:to-orange-500',
+    badge: 'bg-red-50 border-red-200 text-red-700',
+    hero: 'from-red-50/50 via-white to-slate-50/30',
+    btn: 'from-red-700 via-red-600 to-orange-600 hover:from-red-600 hover:to-orange-500 shadow-red-100',
     ring: 'focus:border-red-500 focus:ring-red-500/20',
-    icon: 'text-red-400',
-    dot: 'bg-red-500',
-    border: 'border-red-700/30',
-    crumb: 'text-red-400',
-    tag: 'bg-red-900/40 text-red-300',
+    icon: 'text-red-600',
+    dot: 'bg-red-600',
+    border: 'border-red-100',
+    crumb: 'text-red-600',
+    tag: 'bg-red-50/60 text-red-700 border-red-100/50',
   },
   blue: {
-    badge: 'bg-blue-950/50 border-blue-800/50 text-blue-400',
-    hero: 'from-blue-900/20 via-transparent',
-    btn: 'from-blue-700 via-blue-600 to-indigo-600 hover:from-blue-600 hover:to-indigo-500',
+    badge: 'bg-blue-50 border-blue-200 text-blue-700',
+    hero: 'from-blue-50/50 via-white to-slate-50/30',
+    btn: 'from-blue-700 via-blue-600 to-indigo-600 hover:from-blue-600 hover:to-indigo-500 shadow-blue-100',
     ring: 'focus:border-blue-500 focus:ring-blue-500/20',
-    icon: 'text-blue-400',
-    dot: 'bg-blue-500',
-    border: 'border-blue-700/30',
-    crumb: 'text-blue-400',
-    tag: 'bg-blue-900/40 text-blue-300',
+    icon: 'text-blue-600',
+    dot: 'bg-blue-600',
+    border: 'border-blue-100',
+    crumb: 'text-blue-600',
+    tag: 'bg-blue-50/60 text-blue-700 border-blue-100/50',
   },
   teal: {
-    badge: 'bg-teal-950/50 border-teal-800/50 text-teal-400',
-    hero: 'from-teal-900/20 via-transparent',
-    btn: 'from-teal-700 via-teal-600 to-cyan-600 hover:from-teal-600 hover:to-cyan-500',
+    badge: 'bg-teal-50 border-teal-200 text-teal-700',
+    hero: 'from-teal-50/50 via-white to-slate-50/30',
+    btn: 'from-teal-700 via-teal-600 to-cyan-600 hover:from-teal-600 hover:to-cyan-500 shadow-teal-100',
     ring: 'focus:border-teal-500 focus:ring-teal-500/20',
-    icon: 'text-teal-400',
-    dot: 'bg-teal-500',
-    border: 'border-teal-700/30',
-    crumb: 'text-teal-400',
-    tag: 'bg-teal-900/40 text-teal-300',
+    icon: 'text-teal-600',
+    dot: 'bg-teal-600',
+    border: 'border-teal-100',
+    crumb: 'text-teal-600',
+    tag: 'bg-teal-50/60 text-teal-700 border-teal-100/50',
   },
   amber: {
-    badge: 'bg-amber-950/50 border-amber-800/50 text-amber-400',
-    hero: 'from-amber-900/20 via-transparent',
-    btn: 'from-amber-700 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-500',
+    badge: 'bg-amber-50 border-amber-200 text-amber-700',
+    hero: 'from-amber-50/50 via-white to-slate-50/30',
+    btn: 'from-amber-700 via-amber-600 to-orange-600 hover:from-amber-600 hover:to-orange-500 shadow-amber-100',
     ring: 'focus:border-amber-500 focus:ring-amber-500/20',
-    icon: 'text-amber-400',
-    dot: 'bg-amber-500',
-    border: 'border-amber-700/30',
-    crumb: 'text-amber-400',
-    tag: 'bg-amber-900/40 text-amber-300',
+    icon: 'text-amber-600',
+    dot: 'bg-amber-600',
+    border: 'border-amber-100',
+    crumb: 'text-amber-600',
+    tag: 'bg-amber-50/60 text-amber-700 border-amber-100/50',
   },
   purple: {
-    badge: 'bg-purple-950/50 border-purple-800/50 text-purple-400',
-    hero: 'from-purple-900/20 via-transparent',
-    btn: 'from-purple-700 via-purple-600 to-pink-600 hover:from-purple-600 hover:to-pink-500',
+    badge: 'bg-purple-50 border-purple-200 text-purple-700',
+    hero: 'from-purple-50/50 via-white to-slate-50/30',
+    btn: 'from-purple-700 via-purple-600 to-pink-600 hover:from-purple-600 hover:to-pink-500 shadow-purple-100',
     ring: 'focus:border-purple-500 focus:ring-purple-500/20',
-    icon: 'text-purple-400',
-    dot: 'bg-purple-500',
-    border: 'border-purple-700/30',
-    crumb: 'text-purple-400',
-    tag: 'bg-purple-900/40 text-purple-300',
+    icon: 'text-purple-600',
+    dot: 'bg-purple-600',
+    border: 'border-purple-100',
+    crumb: 'text-purple-600',
+    tag: 'bg-purple-50/60 text-purple-700 border-purple-100/50',
   },
   orange: {
-    badge: 'bg-orange-950/50 border-orange-800/50 text-orange-400',
-    hero: 'from-orange-900/20 via-transparent',
-    btn: 'from-orange-700 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-500',
+    badge: 'bg-orange-50 border-orange-200 text-orange-700',
+    hero: 'from-orange-50/50 via-white to-slate-50/30',
+    btn: 'from-orange-700 via-orange-600 to-amber-600 hover:from-orange-600 hover:to-amber-500 shadow-orange-100',
     ring: 'focus:border-orange-500 focus:ring-orange-500/20',
-    icon: 'text-orange-400',
-    dot: 'bg-orange-500',
-    border: 'border-orange-700/30',
-    crumb: 'text-orange-400',
-    tag: 'bg-orange-900/40 text-orange-300',
+    icon: 'text-orange-600',
+    dot: 'bg-orange-600',
+    border: 'border-orange-100',
+    crumb: 'text-orange-600',
+    tag: 'bg-orange-50/60 text-orange-700 border-orange-100/50',
   },
   pink: {
-    badge: 'bg-pink-950/50 border-pink-800/50 text-pink-400',
-    hero: 'from-pink-900/20 via-transparent',
-    btn: 'from-pink-700 via-pink-600 to-rose-600 hover:from-pink-600 hover:to-rose-500',
+    badge: 'bg-pink-50 border-pink-200 text-pink-700',
+    hero: 'from-pink-50/50 via-white to-slate-50/30',
+    btn: 'from-pink-700 via-pink-600 to-rose-600 hover:from-pink-600 hover:to-rose-500 shadow-pink-100',
     ring: 'focus:border-pink-500 focus:ring-pink-500/20',
-    icon: 'text-pink-400',
-    dot: 'bg-pink-500',
-    border: 'border-pink-700/30',
-    crumb: 'text-pink-400',
-    tag: 'bg-pink-900/40 text-pink-300',
+    icon: 'text-pink-600',
+    dot: 'bg-pink-600',
+    border: 'border-pink-100',
+    crumb: 'text-pink-600',
+    tag: 'bg-pink-50/60 text-pink-700 border-pink-100/50',
   },
 };
 
@@ -110,25 +111,25 @@ const THEME = {
 function FAQItem({ item, idx, t }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-gray-700/50 rounded-xl overflow-hidden">
+    <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
       <button
         id={`faq-q-${idx}`}
         aria-expanded={open}
         aria-controls={`faq-a-${idx}`}
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-4 text-left bg-gray-900 hover:bg-gray-800/80 transition gap-4"
+        className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-slate-50 transition gap-4 text-indigo-950 font-bold"
       >
-        <span className="font-medium text-gray-200 text-sm">{item.q}</span>
+        <span className="text-sm">{item.q}</span>
         {open
-          ? <FaChevronUp className={`${t.icon} shrink-0`} />
-          : <FaChevronDown className="text-gray-500 shrink-0" />}
+          ? <FaChevronUp className={`${t.icon} shrink-0 text-xs`} />
+          : <FaChevronDown className="text-slate-400 shrink-0 text-xs" />}
       </button>
       {open && (
         <div
           id={`faq-a-${idx}`}
           role="region"
           aria-labelledby={`faq-q-${idx}`}
-          className="p-4 bg-gray-900/50 border-t border-gray-700/50 text-sm text-gray-300 leading-relaxed"
+          className="p-5 bg-slate-50/50 border-t border-slate-100 text-xs md:text-sm text-slate-600 leading-relaxed"
         >
           {item.a}
         </div>
@@ -138,35 +139,35 @@ function FAQItem({ item, idx, t }) {
 }
 
 // ─── Other Exams sidebar ─────────────────────────────────────────────────────
-function OtherExams({ currentSlug }) {
-  const others = EXAMS.filter((e) => e.slug !== currentSlug).slice(0, 5);
+function OtherExams({ currentSlug, allExams = [] }) {
+  const others = allExams.filter((e) => e.slug !== currentSlug).slice(0, 5);
   return (
-    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5">
-      <h3 className="font-semibold text-gray-200 mb-3 text-sm flex items-center gap-2">
-        <FaBookOpen className="text-indigo-400" /> Other Exams
+    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+      <h3 className="font-extrabold text-indigo-950 mb-4 text-sm flex items-center gap-2">
+        <FaBookOpen className="text-indigo-600" /> Other Exams
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {others.map((e) => (
           e.status === 'active' ? (
             <Link
               key={e.slug}
               href={`/exams/${e.slug}`}
-              className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800/60 hover:bg-gray-800 transition group text-sm"
+              className="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-100 hover:border-indigo-100 transition group text-xs font-bold text-slate-700"
             >
-              <span className="flex items-center gap-2 text-gray-300 group-hover:text-white">
-                <span>{e.icon}</span> {e.name}
+              <span className="flex items-center gap-2">
+                <span className="text-lg">{e.icon}</span> {e.name}
               </span>
-              <FaArrowRight className="text-xs text-gray-600 group-hover:text-indigo-400 transition" />
+              <FaArrowRight className="text-[10px] text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" />
             </Link>
           ) : (
             <div
               key={e.slug}
-              className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-800/30 text-sm opacity-50"
+              className="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50/50 border border-slate-100/50 text-xs font-bold text-slate-400 opacity-60"
             >
-              <span className="flex items-center gap-2 text-gray-500">
-                <span>{e.icon}</span> {e.name}
+              <span className="flex items-center gap-2">
+                <span className="text-lg">{e.icon}</span> {e.name}
               </span>
-              <FaLock className="text-xs text-gray-600" />
+              <FaLock className="text-[10px]" />
             </div>
           )
         ))}
@@ -176,7 +177,7 @@ function OtherExams({ currentSlug }) {
 }
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
-export default function ExamPage({ exam }) {
+export default function ExamPage({ exam, allExams = [] }) {
   const router = useRouter();
   const [url, setUrl] = useState('');
   const [liveCount, setLiveCount] = useState(0);
@@ -184,38 +185,38 @@ export default function ExamPage({ exam }) {
   // Guard: fallback or missing prop during dev HMR
   if (router.isFallback || !exam) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-400 text-sm">Loading exam data...</p>
+          <div className="w-10 h-10 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-500 text-xs font-bold">Loading exam data...</p>
         </div>
       </div>
     );
   }
 
-  const t = THEME[exam.themeColor] || THEME.indigo;
+  const themeColorKey = exam.theme_color || 'indigo';
+  const t = THEME[themeColorKey] || THEME.indigo;
   const CANONICAL = `${SITE_URL}/exams/${exam.slug}`;
-
 
   // Live candidate counter
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/live-stats?exam=${exam.examId}`);
+        const res = await axios.get(`${API_BASE}/api/live-stats?exam=${exam.id}`);
         setLiveCount(res.data.totalViews || 0);
       } catch {
         setLiveCount((prev) => prev || Math.floor(Math.random() * 5000 + 8000));
       }
     };
     fetchCount();
-    const t = setInterval(fetchCount, 15000);
-    return () => clearInterval(t);
-  }, [exam.examId]);
+    const timer = setInterval(fetchCount, 15000);
+    return () => clearInterval(timer);
+  }, [exam.id]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!url.trim()) return;
-    router.push(`/result?url=${encodeURIComponent(url.trim())}&exam=${exam.examId}`);
+    router.push(`/result?url=${encodeURIComponent(url.trim())}&exam=${exam.id}`);
   };
 
   // ── Schema.org structured data ──────────────────────────────────────────
@@ -244,7 +245,7 @@ export default function ExamPage({ exam }) {
     '@type': 'Event',
     name: exam.seo.eventName,
     description: exam.seo.eventDesc,
-    organizer: { '@type': 'Organization', name: exam.conductedBy, url: 'https://indianrailways.gov.in' },
+    organizer: { '@type': 'Organization', name: exam.conducted_by, url: 'https://indianrailways.gov.in' },
     url: CANONICAL,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
@@ -293,41 +294,24 @@ export default function ExamPage({ exam }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
 
-      <div className="min-h-screen bg-gray-950 text-white">
+      <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
 
         {/* ── Navbar ─────────────────────────────────────────────────────── */}
-        <nav className="sticky top-0 z-50 bg-gray-900/90 backdrop-blur-md border-b border-gray-800 px-4 py-3">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-xl font-black gradient-text">⚡ RankVeda</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link href="/exams" className="text-sm text-gray-400 hover:text-white transition hidden sm:block">
-                All Exams
-              </Link>
-              <Link
-                href="/marketplace"
-                className="flex items-center gap-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition"
-              >
-                <FaBookOpen className="text-xs" /> Question Bank
-              </Link>
-            </div>
-          </div>
-        </nav>
+        <Navbar user={user} />
 
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
-        <nav aria-label="breadcrumb" className="max-w-6xl mx-auto px-4 pt-4">
-          <ol className="flex items-center gap-2 text-xs text-gray-500">
-            <li><Link href="/" className="hover:text-gray-300">Home</Link></li>
-            <li>›</li>
-            <li><Link href="/exams" className="hover:text-gray-300">Exams</Link></li>
-            <li>›</li>
-            <li className={`${t.crumb} font-medium`}>{exam.name}</li>
+        <nav aria-label="breadcrumb" className="max-w-7xl mx-auto px-4 pt-4">
+          <ol className="flex items-center gap-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+            <li><Link href="/" className="hover:text-indigo-600">Home</Link></li>
+            <li className="text-slate-350">›</li>
+            <li><Link href="/exams" className="hover:text-indigo-600">Exams</Link></li>
+            <li className="text-slate-350">›</li>
+            <li className={`${t.crumb} font-extrabold`}>{exam.name}</li>
           </ol>
         </nav>
 
         {/* ── Hero ───────────────────────────────────────────────────────── */}
-        <section className={`max-w-6xl mx-auto px-4 py-10 relative`}>
+        <section className="max-w-7xl mx-auto px-4 py-10 relative">
           {/* Subtle gradient glow */}
           <div className={`absolute inset-0 bg-gradient-to-br ${t.hero} to-transparent pointer-events-none rounded-3xl`} />
 
@@ -335,28 +319,27 @@ export default function ExamPage({ exam }) {
 
             {/* Left — copy */}
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-              <div className={`inline-flex items-center gap-2 ${t.badge} border text-xs font-bold px-3 py-1.5 rounded-full mb-4`}>
+              <div className={`inline-flex items-center gap-2 ${t.badge} border text-[10px] font-extrabold px-3 py-1.5 rounded-full mb-4`}>
                 {exam.icon} {exam.name} {exam.year}
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-black leading-tight mb-3">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-950 leading-tight mb-3 tracking-tight">
                 {exam.name}{' '}
-                <span className="gradient-text">Rank Predictor</span>{' '}
+                <span className="text-indigo-600">Rank Predictor</span>{' '}
                 {exam.year} — Score Calculator &amp; Answer Key
               </h1>
 
-
-              <p className="text-gray-400 text-base leading-relaxed mb-5">
-                {exam.bodyText}
+              <p className="text-slate-500 text-sm leading-relaxed mb-5">
+                {exam.body_text}
               </p>
 
               {/* Live counter */}
-              <div className="flex items-center gap-2 text-sm mb-6">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-green-400 font-bold" suppressHydrationWarning>
+              <div className="flex items-center gap-2 text-xs font-bold mb-6">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-emerald-600" suppressHydrationWarning>
                   {liveCount.toLocaleString()}+
                 </span>
-                <span className="text-gray-500">candidates checked on RankVeda</span>
+                <span className="text-slate-400 uppercase tracking-wide">candidates checked on RankVeda</span>
               </div>
 
               {/* Quick feature pills */}
@@ -370,7 +353,7 @@ export default function ExamPage({ exam }) {
                 ].map((pill) => (
                   <span
                     key={pill.text}
-                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border border-gray-700/50 ${t.tag}`}
+                    className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full border ${t.tag}`}
                   >
                     {pill.icon} {pill.text}
                   </span>
@@ -380,14 +363,14 @@ export default function ExamPage({ exam }) {
               {/* Exam at a glance */}
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Questions', value: exam.sections.reduce((s, sec) => s + sec.questions, 0) + ' MCQs' },
+                  { label: 'Questions', value: exam.sections.reduce((sum, sec) => sum + sec.questions, 0) + ' MCQs' },
                   { label: 'Duration', value: exam.highlights.find(h => h.label === 'Duration')?.value || '—' },
                   { label: 'Sections', value: exam.sections.length + ' Subjects' },
                   { label: 'Marking', value: exam.highlights.find(h => h.label === 'Negative Marking')?.value || '—' },
                 ].map((stat) => (
-                  <div key={stat.label} className="bg-gray-900/60 border border-gray-800 rounded-xl px-4 py-3">
-                    <p className="text-xs text-gray-500 mb-0.5">{stat.label}</p>
-                    <p className="text-sm font-bold text-gray-200">{stat.value}</p>
+                  <div key={stat.label} className="bg-white border border-slate-100 rounded-2xl px-4 py-3 shadow-sm">
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">{stat.label}</p>
+                    <p className="text-sm font-extrabold text-indigo-950">{stat.value}</p>
                   </div>
                 ))}
               </div>
@@ -400,18 +383,18 @@ export default function ExamPage({ exam }) {
               transition={{ delay: 0.15 }}
               className="lg:sticky lg:top-24"
             >
-              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 shadow-2xl">
-                <h2 className="text-lg font-bold mb-1 text-gray-200">
+              <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                <h2 className="text-lg font-extrabold mb-1 text-indigo-950">
                   Check Your {exam.name} Score
                 </h2>
-                <p className="text-xs text-gray-500 mb-4">
+                <p className="text-xs font-semibold text-slate-400 mb-4">
                   Paste your official response sheet / answer key URL below
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label htmlFor="answer-key-url" className="block text-xs font-medium text-gray-400 mb-1.5">
-                      Answer Key / Response Sheet URL <span className="text-red-400">*</span>
+                    <label htmlFor="answer-key-url" className="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Answer Key / Response Sheet URL <span className="text-red-500">*</span>
                     </label>
                     <input
                       id="answer-key-url"
@@ -420,9 +403,9 @@ export default function ExamPage({ exam }) {
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder="https://cdndigialm.com/.../assessment.html"
                       required
-                      className={`w-full px-4 py-3 rounded-xl bg-gray-800 border border-gray-600 ${t.ring} focus:ring-2 text-white placeholder-gray-600 text-sm transition outline-none`}
+                      className={`w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 ${t.ring} focus:ring-2 text-slate-800 placeholder-slate-400 text-sm transition outline-none`}
                     />
-                    <p className="mt-1.5 text-xs text-gray-600">
+                    <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
                       Find this URL on the official exam portal after result declaration
                     </p>
                   </div>
@@ -430,25 +413,25 @@ export default function ExamPage({ exam }) {
                   <button
                     type="submit"
                     id="check-score-btn"
-                    className={`w-full py-3 rounded-xl bg-gradient-to-r ${t.btn} text-white font-bold transition flex items-center justify-center gap-2 text-sm shadow-lg`}
+                    className={`w-full py-3 rounded-xl bg-gradient-to-r ${t.btn} text-white font-extrabold transition flex items-center justify-center gap-2 text-sm shadow-md`}
                   >
-                    <FaSearch /> Check Score &amp; Rank Now
+                    <FaSearch className="text-xs" /> Check Score &amp; Rank Now
                   </button>
                 </form>
 
                 {/* Trust signals */}
-                <div className="mt-5 pt-4 border-t border-gray-800">
+                <div className="mt-5 pt-4 border-t border-slate-100">
                   <div className="grid grid-cols-3 gap-2">
                     {exam.features.map((f) => (
                       <div key={f.text} className="flex flex-col items-center text-center gap-1">
                         <span className="text-xl">{f.icon}</span>
-                        <span className="text-xs text-gray-500">{f.text}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{f.text}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <p className="mt-4 text-center text-xs text-gray-600">
+                <p className="mt-4 text-center text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                   🔒 Free forever · No login required · Instant results
                 </p>
               </div>
@@ -457,13 +440,13 @@ export default function ExamPage({ exam }) {
         </section>
 
         {/* ── How it Works ───────────────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-4 pb-10">
-          <h2 className="text-xl font-bold mb-5 text-gray-200">
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">
             How to Check {exam.name} Score on RankVeda
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { step: '01', title: 'Open Official Portal', desc: `Go to the official ${exam.conductedBy} website and find your response sheet link.`, icon: '🌐' },
+              { step: '01', title: 'Open Official Portal', desc: `Go to the official ${exam.conducted_by} website and find your response sheet link.`, icon: '🌐' },
               { step: '02', title: 'Copy URL & Paste', desc: 'Copy the response sheet URL and paste it in the input box above on RankVeda.', icon: '📋' },
               { step: '03', title: 'Instant Analysis', desc: 'Get score with negative marking, section-wise breakdown, live rank and percentile instantly.', icon: '🚀' },
             ].map((item) => (
@@ -471,94 +454,94 @@ export default function ExamPage({ exam }) {
                 key={item.step}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * parseInt(item.step) }}
-                className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5 relative overflow-hidden"
+                transition={{ delay: 0.05 * parseInt(item.step) }}
+                className="bg-white border border-slate-100 rounded-3xl p-6 relative overflow-hidden shadow-sm"
               >
-                <span className="absolute top-3 right-4 text-5xl font-black text-gray-800/50 select-none leading-none">
+                <span className="absolute top-3 right-4 text-5xl font-black text-slate-100 select-none leading-none">
                   {item.step}
                 </span>
                 <div className="text-2xl mb-3">{item.icon}</div>
-                <h3 className="font-bold text-gray-200 mb-1 text-sm">{item.title}</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                <h3 className="font-extrabold text-indigo-950 mb-1 text-sm">{item.title}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
               </motion.div>
             ))}
           </div>
         </section>
 
         {/* ── Exam Pattern + Details ─────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-4 pb-10">
-          <h2 className="text-xl font-bold mb-5 text-gray-200">{exam.name} Exam Pattern 2025</h2>
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">{exam.name} Exam Pattern {exam.year}</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6 items-start">
 
             {/* Pattern table */}
-            <div className="bg-gray-900/80 border border-gray-800 rounded-3xl p-6">
-              <div className={`flex items-center gap-2 mb-4 ${t.icon}`}>
-                <FaChartLine />
-                <span className="font-semibold text-gray-200">Subject-wise Breakdown</span>
+            <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+              <div className={`flex items-center gap-2 mb-4 font-bold ${t.icon}`}>
+                <FaChartLine className="text-sm" />
+                <span className="text-indigo-950 font-extrabold text-sm">Subject-wise Breakdown</span>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-950/60">
-                <div className="grid grid-cols-3 border-b border-gray-800 text-xs font-semibold text-gray-400 bg-gray-900/60">
+              <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white">
+                <div className="grid grid-cols-3 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 bg-slate-50/50 uppercase tracking-wider">
                   <div className="p-3">Subject</div>
                   <div className="p-3 text-center">Questions</div>
                   <div className="p-3 text-center">Marks</div>
                 </div>
                 {exam.sections.map((section) => (
-                  <div key={section.name} className="grid grid-cols-3 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/30 transition">
-                    <div className="p-3 text-sm text-white">{section.name}</div>
-                    <div className="p-3 text-sm text-center text-gray-400">{section.questions}</div>
-                    <div className="p-3 text-sm text-center text-gray-400">{section.marks}</div>
+                  <div key={section.name} className="grid grid-cols-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition">
+                    <div className="p-3 text-xs font-semibold text-slate-700">{section.name}</div>
+                    <div className="p-3 text-xs text-center font-bold text-slate-500">{section.questions}</div>
+                    <div className="p-3 text-xs text-center font-bold text-slate-500">{section.marks}</div>
                   </div>
                 ))}
                 {/* Total row */}
-                <div className="grid grid-cols-3 bg-gray-800/40 border-t border-gray-700">
-                  <div className="p-3 text-sm font-bold text-gray-200">Total</div>
-                  <div className={`p-3 text-sm text-center font-bold ${t.icon}`}>
-                    {exam.sections.reduce((s, sec) => s + sec.questions, 0)}
+                <div className="grid grid-cols-3 bg-slate-50 border-t border-slate-100">
+                  <div className="p-3 text-xs font-extrabold text-indigo-950">Total</div>
+                  <div className={`p-3 text-xs text-center font-extrabold ${t.icon}`}>
+                    {exam.sections.reduce((sum, sec) => sum + sec.questions, 0)}
                   </div>
-                  <div className={`p-3 text-sm text-center font-bold ${t.icon}`}>
-                    {exam.sections.reduce((s, sec) => s + sec.marks, 0)}
+                  <div className={`p-3 text-xs text-center font-extrabold ${t.icon}`}>
+                    {exam.sections.reduce((sum, sec) => sum + sec.marks, 0)}
                   </div>
                 </div>
               </div>
 
               {/* Marking scheme */}
-              <div className="mt-4 rounded-2xl border border-gray-800 bg-gray-950/60 p-4 text-sm text-gray-400">
-                <p className="font-semibold text-white mb-2 text-xs uppercase tracking-wide">Marking Scheme</p>
-                <div className="space-y-1">
+              <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/30 p-4 text-xs text-slate-500">
+                <p className="font-extrabold text-indigo-950 mb-2 text-[10px] uppercase tracking-wider">Marking Scheme</p>
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <FaCheckCircle className="text-green-500 text-xs" />
-                    <span>Correct answer: <strong className="text-green-400">+1 mark</strong></span>
+                    <FaCheckCircle className="text-emerald-500 text-xs shrink-0" />
+                    <span>Correct answer: <strong className="text-emerald-600 font-bold">+1 mark</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-red-500 text-xs font-bold">✕</span>
-                    <span>Wrong answer: <strong className="text-red-400">
+                    <span className="text-red-500 text-[10px] font-black shrink-0 w-3 text-center">✕</span>
+                    <span>Wrong answer: <strong className="text-red-600 font-bold">
                       -{exam.highlights.find(h => h.label === 'Negative Marking')?.value?.replace('mark for each wrong answer', '').trim() || '1/3'}
                     </strong></span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600 text-xs">○</span>
-                    <span>Unattempted: <strong className="text-gray-400">0 marks</strong></span>
+                    <span className="text-slate-400 text-xs shrink-0 w-3 text-center">○</span>
+                    <span>Unattempted: <strong className="text-slate-500 font-bold">0 marks</strong></span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Exam details table */}
-            <div className="bg-gray-900/80 border border-gray-800 rounded-3xl p-6">
-              <div className={`flex items-center gap-2 mb-4 ${t.icon}`}>
-                <FaRobot />
-                <span className="font-semibold text-gray-200">Exam Details</span>
+            <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+              <div className={`flex items-center gap-2 mb-4 font-bold ${t.icon}`}>
+                <FaRobot className="text-sm" />
+                <span className="text-indigo-950 font-extrabold text-sm">Exam Details</span>
               </div>
               <div className="space-y-2">
                 {exam.highlights.map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-xl border border-gray-800 bg-gray-950/60 px-4 py-3 flex items-center justify-between gap-3"
+                    className="rounded-2xl border border-slate-100 bg-slate-50/30 px-4 py-3 flex items-center justify-between gap-3"
                   >
-                    <span className="text-xs font-semibold text-gray-400">{item.label}</span>
-                    <span className="text-xs text-right text-gray-200">{item.value}</span>
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{item.label}</span>
+                    <span className="text-xs font-extrabold text-indigo-950">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -567,21 +550,21 @@ export default function ExamPage({ exam }) {
         </section>
 
         {/* ── Topics Covered ─────────────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-4 pb-10">
-          <h2 className="text-xl font-bold mb-5 text-gray-200">{exam.name} Topics Covered</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">{exam.name} Topics Covered</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {exam.sections.map((section) => (
-              <div key={section.name} className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-3">
+              <div key={section.name} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
                   <div className={`w-2 h-2 rounded-full ${t.dot}`} />
-                  <h3 className="font-semibold text-gray-200 text-sm">{section.name}</h3>
-                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${t.tag}`}>
+                  <h3 className="font-extrabold text-indigo-950 text-sm">{section.name}</h3>
+                  <span className={`ml-auto text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${t.tag}`}>
                     {section.questions} Qs
                   </span>
                 </div>
-                <ul className="space-y-1">
+                <ul className="space-y-2">
                   {section.topics.map((topic) => (
-                    <li key={topic} className="text-xs text-gray-500 flex items-center gap-2">
+                    <li key={topic} className="text-xs font-semibold text-slate-500 flex items-center gap-2">
                       <span className={`w-1 h-1 rounded-full ${t.dot} opacity-60`} />
                       {topic}
                     </li>
@@ -593,9 +576,9 @@ export default function ExamPage({ exam }) {
         </section>
 
         {/* ── Why RankVeda ───────────────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-4 pb-10">
-          <h2 className="text-xl font-bold mb-5 text-gray-200">Why Use RankVeda for {exam.name}?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">Why Use RankVeda for {exam.name}?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: '⚡', title: 'Instant Score Calculation', desc: 'Get your exact score in seconds — automatic negative marking calculation, no manual effort.' },
               { icon: '📊', title: 'Section-wise Analysis', desc: 'See your performance broken down by subject. Identify weak areas instantly.' },
@@ -606,45 +589,45 @@ export default function ExamPage({ exam }) {
             ].map((feature) => (
               <div
                 key={feature.title}
-                className="bg-gray-900/80 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition"
+                className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300"
               >
                 <div className="text-2xl mb-3">{feature.icon}</div>
-                <h3 className="font-semibold text-gray-200 text-sm mb-2">{feature.title}</h3>
-                <p className="text-xs text-gray-500 leading-relaxed">{feature.desc}</p>
+                <h3 className="font-extrabold text-indigo-950 text-sm mb-2">{feature.title}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{feature.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* ── FAQ ────────────────────────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-4 pb-10">
-          <h2 className="text-2xl font-bold mb-5">
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">
             Frequently Asked Questions — {exam.name}
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-            <div className="space-y-3">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+            <div className="space-y-4">
               {exam.faq.map((item, idx) => (
                 <FAQItem key={item.q} item={item} idx={idx} t={t} />
               ))}
             </div>
 
             {/* Sidebar */}
-            <div className="space-y-4">
-              <OtherExams currentSlug={exam.slug} />
+            <div className="space-y-6">
+              <OtherExams currentSlug={exam.slug} allExams={allExams} />
 
               {/* CTA card */}
-              <div className={`bg-gradient-to-br ${exam.color} border ${exam.border} rounded-2xl p-5`}>
-                <h3 className="font-bold text-gray-200 text-sm mb-2">
+              <div className={`bg-gradient-to-br ${t.hero} border border-slate-100 rounded-3xl p-6 shadow-sm`}>
+                <h3 className="font-extrabold text-indigo-950 text-sm mb-2">
                   Ready to check your {exam.name} score?
                 </h3>
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-slate-500 mb-4">
                   Paste your response sheet URL and get instant results.
                 </p>
                 <button
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                  className={`w-full py-2 rounded-lg bg-gradient-to-r ${t.btn} text-white font-bold text-sm transition flex items-center justify-center gap-2`}
+                  className={`w-full py-2.5 rounded-xl bg-gradient-to-r ${t.btn} text-white font-extrabold text-xs transition flex items-center justify-center gap-2 shadow-md`}
                 >
-                  <FaSearch /> Check Score Now
+                  <FaSearch className="text-[10px]" /> Check Score Now
                 </button>
               </div>
             </div>
@@ -652,18 +635,27 @@ export default function ExamPage({ exam }) {
         </section>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <footer className="border-t border-gray-800 mt-4 py-8 px-4">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-lg font-black gradient-text">⚡ RankVeda</span>
-              <p className="text-xs text-gray-600 mt-1">
-                Unofficial rank predictor. Not affiliated with {exam.conductedBy}.
-              </p>
+        <footer className="bg-slate-900 text-slate-400 pt-12 pb-8 px-4 mt-16">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-slate-800 pb-8">
+              <div>
+                <div className="mb-2"><Logo size="sm" /></div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Unofficial rank predictor. Not affiliated with {exam.conducted_by || 'recruitment board'}.
+                </p>
+              </div>
+              <div className="flex items-center gap-6 text-xs font-bold uppercase tracking-wider">
+                <Link href="/" className="hover:text-white transition">Home</Link>
+                <Link href="/exams" className="hover:text-white transition">Exams</Link>
+                <Link href="/marketplace" className="hover:text-white transition">Question Bank</Link>
+              </div>
             </div>
-            <div className="flex items-center gap-6 text-xs text-gray-600">
-              <Link href="/exams" className="hover:text-gray-400 transition">All Exams</Link>
-              <Link href="/marketplace" className="hover:text-gray-400 transition">Question Bank</Link>
-              <Link href="/" className="hover:text-gray-400 transition">Home</Link>
+            
+            <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div className="text-center md:text-right normal-case tracking-normal">
+                Disclaimer: Scores are unofficial. Final result by respective recruitment boards only.
+              </div>
             </div>
           </div>
         </footer>
@@ -673,16 +665,35 @@ export default function ExamPage({ exam }) {
   );
 }
 
-// ─── Static Generation ────────────────────────────────────────────────────────
-export async function getStaticPaths() {
-  return {
-    paths: getAllSlugs().map((slug) => ({ params: { slug } })),
-    fallback: false,
-  };
-}
-
-export async function getStaticProps({ params }) {
-  const exam = getExamBySlug(params.slug);
-  if (!exam) return { notFound: true };
-  return { props: { exam } };
+// ─── Dynamic Server Side Rendering ───────────────────────────────────────────
+export async function getServerSideProps({ params }) {
+  try {
+    const [examRes, allExamsRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/public/exams/${params.slug}`),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/public/exams`)
+    ]);
+    
+    if (examRes.status === 404) {
+      return { notFound: true };
+    }
+    
+    const examData = await examRes.json();
+    const allExamsData = await allExamsRes.json();
+    const exam = examData.exam;
+    const allExams = allExamsData.exams || [];
+    
+    if (!exam || exam.status === 'draft') {
+      return { notFound: true };
+    }
+    
+    return {
+      props: {
+        exam,
+        allExams,
+      },
+    };
+  } catch (e) {
+    console.error("Error fetching exam details:", e);
+    return { notFound: true };
+  }
 }

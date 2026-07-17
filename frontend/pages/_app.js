@@ -1,4 +1,5 @@
 import '@/styles/globals.css';
+import 'react-quill/dist/quill.snow.css';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import '@/utils/firebase';

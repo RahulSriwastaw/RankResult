@@ -7,6 +7,7 @@ import {
   FaLock, FaUnlock, FaSearch, FaCoins, FaBookOpen,
   FaCalendar, FaFilter, FaCheck, FaTimes, FaShoppingCart, FaUser, FaChartLine
 } from 'react-icons/fa';
+import Navbar from '../components/Navbar';
 
 const API = 'http://localhost:5000';
 
@@ -150,153 +151,97 @@ export default function Marketplace() {
       let url = `${API}/api/marketplace/exams/${examId}/questions?page=${pg}&per_page=20`;
       if (sq) url += `&search=${encodeURIComponent(sq)}`;
       if (shift) {
-        url += `&shift_date=${encodeURIComponent(shift.test_date)}`;
-        url += `&shift_time=${encodeURIComponent(shift.test_time)}`;
-        url += `&shift_subject=${encodeURIComponent(shift.subject)}`;
+        if (shift.subject) url += `&subject=${encodeURIComponent(shift.subject)}`;
+        if (shift.test_date) url += `&shift_date=${encodeURIComponent(shift.test_date)}`;
+        if (shift.test_time) url += `&shift_time=${encodeURIComponent(shift.test_time)}`;
       }
       const res = await fetch(url, { headers: authHeaders });
       const data = await res.json();
       setQuestions(Array.isArray(data.questions) ? data.questions : []);
       setTotalPages(data.pages || 1);
-      setSelectedExam(prev => ({ ...prev, is_purchased: data.is_purchased }));
     } catch (e) { console.error(e); }
     finally { setQLoading(false); }
-  };
-
-  const applyFilters = (nextFilters) => {
-    setFilters(nextFilters);
-    setPage(1);
-    setSelectedIds([]);
-    loadQuestions(selectedExam.id, 1, search, selectedShift);
-  };
-
-  const handleDownload = async () => {
-    if (!selectedExam || !selectedShift) return;
-    const query = new URLSearchParams({ 
-      export: 'csv', 
-      page: 1, 
-      per_page: 500, 
-      search,
-      shift_date: selectedShift.test_date,
-      shift_time: selectedShift.test_time,
-      shift_subject: selectedShift.subject,
-    });
-    const url = `${API}/api/marketplace/exams/${selectedExam.id}/questions?${query.toString()}`;
-    window.open(url, '_blank');
   };
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const buyItem = async (item, kind = 'exam') => {
-    if (!user) {
-      router.push(`/login?redirect=/marketplace`);
-      return;
-    }
-    setBuyModal({ ...item, kind });
-    setBuyMsg('');
+  const handleDownload = () => {
+    if (!selectedExam || !selectedShift) return;
+    const shift = selectedShift;
+    const downloadUrl = `${API}/api/marketplace/exams/${selectedExam.id}/download?subject=${encodeURIComponent(shift.subject)}&shift_date=${encodeURIComponent(shift.test_date)}&shift_time=${encodeURIComponent(shift.test_time)}&token=${token || ''}`;
+    window.open(downloadUrl, '_blank');
   };
 
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      if (window.Razorpay) return resolve(true);
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
+  const buyItem = (item, kind = 'exam') => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    setBuyMsg('');
+    setBuyModal({ ...item, kind });
   };
 
   const confirmBuy = async () => {
+    if (!buyModal) return;
     setBuying(true);
-    setBuyMsg('');
+    setBuyMsg('Processing request...');
     try {
-      if (buyModal.kind === 'pointspack') {
-        const res = await fetch(`${API}/api/marketplace/points-packs/purchase`, {
+      if (buyModal.kind === 'pack') {
+        const res = await fetch(`${API}/api/marketplace/packs/${buyModal.id}/buy`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ pack_id: buyModal.id }),
+          headers: { 'Content-Type': 'application/json', ...authHeaders }
         });
         const data = await res.json();
         if (data.success) {
           setBuyMsg('✅ ' + data.message);
-          fetchUserPoints();
-          setTimeout(() => setBuyModal(null), 1200);
+          fetchExams();
+          fetchPacks();
+          setTimeout(() => setBuyModal(null), 1500);
         } else {
-          setBuyMsg('❌ ' + (data.error || 'Purchase failed'));
+          setBuyMsg('❌ ' + (data.error || 'Failed to purchase pack'));
         }
-      } else if (buyModal.kind === 'pack') {
-        // Razorpay flow for B2B packs
-        const resOrder = await fetch(`${API}/api/marketplace/packs/${buyModal.id}/razorpay/order`, {
+      } else if (buyModal.kind === 'pointspack') {
+        const orderRes = await fetch(`${API}/api/payments/razorpay/create-order`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders }
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({ points_pack_id: buyModal.id }),
         });
-        const orderData = await resOrder.json();
+        const orderData = await orderRes.json();
         if (!orderData.success) {
-          setBuyMsg('❌ ' + (orderData.error || 'Failed to initialize order'));
+          setBuyMsg('❌ ' + (orderData.error || 'Failed to create order'));
           setBuying(false);
           return;
         }
 
-        if (orderData.is_mock) {
-          const confirmMock = window.confirm(`[RAZORPAY SANDBOX] Pay ₹${buyModal.price} for pack "${buyModal.name}"?`);
-          if (!confirmMock) {
-            setBuyMsg('❌ Payment cancelled');
-            setBuying(false);
-            return;
-          }
-          // Call verify with mock flag
-          const resVerify = await fetch(`${API}/api/marketplace/packs/${buyModal.id}/razorpay/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeaders },
-            body: JSON.stringify({ is_mock: true })
-          });
-          const verifyData = await resVerify.json();
-          if (verifyData.success) {
-            setBuyMsg('✅ ' + verifyData.message);
-            fetchPacks();
-            fetchExams();
-            setTimeout(() => setBuyModal(null), 1200);
-          } else {
-            setBuyMsg('❌ ' + (verifyData.error || 'Verification failed'));
-          }
-        } else {
-          // Real Razorpay checkout
-          const scriptLoaded = await loadRazorpay();
-          if (!scriptLoaded) {
-            setBuyMsg('❌ Failed to load Razorpay SDK');
-            setBuying(false);
-            return;
-          }
+        if (typeof window !== 'undefined' && window.Razorpay) {
           const options = {
             key: orderData.key_id,
             amount: orderData.amount,
             currency: orderData.currency,
-            name: 'RankVeda B2B',
-            description: orderData.pack.name,
+            name: 'RankVeda',
+            description: `Points Pack: ${buyModal.name}`,
             order_id: orderData.order_id,
             handler: async function (response) {
               setBuying(true);
-              setBuyMsg('Verifying payment...');
+              setBuyMsg('Verifying payment details...');
               try {
-                const resVerify = await fetch(`${API}/api/marketplace/packs/${buyModal.id}/razorpay/verify`, {
+                const verifyRes = await fetch(`${API}/api/payments/razorpay/verify-payment`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...authHeaders },
                   body: JSON.stringify({
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_payment_id: response.razorpay_payment_id,
                     razorpay_signature: response.razorpay_signature,
-                    is_mock: false
+                    points_pack_id: buyModal.id
                   })
                 });
-                const verifyData = await resVerify.json();
+                const verifyData = await verifyRes.json();
                 if (verifyData.success) {
-                  setBuyMsg('✅ ' + verifyData.message);
-                  fetchPacks();
-                  fetchExams();
-                  setTimeout(() => setBuyModal(null), 1200);
+                  setBuyMsg('✅ Points added successfully!');
+                  fetchUserPoints();
+                  setTimeout(() => setBuyModal(null), 1500);
                 } else {
                   setBuyMsg('❌ ' + (verifyData.error || 'Verification failed'));
                 }
@@ -322,7 +267,6 @@ export default function Marketplace() {
           rzp.open();
         }
       } else {
-        // Original Points purchase flow for standard exams
         const res = await fetch(`${API}/api/marketplace/purchase`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
@@ -352,7 +296,7 @@ export default function Marketplace() {
   };
 
   const OPTION_LABELS = ['A', 'B', 'C', 'D'];
-  const OPTION_COLORS = { A: '#60a5fa', B: '#c084fc', C: '#fbbf24', D: '#f87171' };
+  const OPTION_COLORS = { A: '#3b82f6', B: '#a855f7', C: '#f59e0b', D: '#ef4444' };
 
   // ── Shift Selection View ─────────────────────────────────────────────────
   if (selectedExam && !selectedShift) {
@@ -361,26 +305,25 @@ export default function Marketplace() {
         <Head>
           <title>{selectedExam.name} — Shifts | RankVeda</title>
         </Head>
-        <div className="min-h-screen bg-gray-950 text-white">
-          <NavBar user={user} />
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
+          <NavBar user={currentUser} />
           <div className="max-w-5xl mx-auto px-4 py-8">
-            <div className="flex items-center gap-4 mb-6">
-              <button onClick={() => { setSelectedExam(null); setSelectedShift(null); }}
-                className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1">
-                ← Back to Exams
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-2xl font-bold">{selectedExam.name}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">Select a shift to view questions</p>
+                <button onClick={() => { setSelectedExam(null); setSelectedShift(null); }}
+                  className="text-indigo-600 hover:text-indigo-500 text-xs font-bold uppercase tracking-wider flex items-center gap-1 mb-2">
+                  ← Back to Exams
+                </button>
+                <h1 className="text-2xl font-extrabold text-indigo-950">{selectedExam.name}</h1>
+                <p className="text-slate-500 text-xs mt-0.5">Select a shift to view questions</p>
               </div>
-              {!selectedExam.is_purchased && (
+              {!selectedExam.is_purchased ? (
                 <button onClick={() => buyItem(selectedExam, 'exam')}
-                  className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold text-sm">
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 text-white font-bold text-xs shadow-md">
                   <FaShoppingCart /> Unlock — {selectedExam.price} Points
                 </button>
-              )}
-              {selectedExam.is_purchased && (
-                <div className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-green-900/40 border border-green-700 text-green-400 text-sm font-medium">
+              ) : (
+                <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-bold">
                   <FaUnlock /> Purchased ✅
                 </div>
               )}
@@ -388,12 +331,12 @@ export default function Marketplace() {
 
             {shiftsLoading ? (
               <div className="flex justify-center py-16">
-                <div className="animate-spin w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
               </div>
             ) : shifts.length === 0 ? (
-              <div className="text-center py-16 text-gray-500 bg-gray-900/50 border border-gray-800 rounded-2xl">
-                <FaCalendar className="text-4xl mx-auto mb-4 opacity-40" />
-                <p>No shifts available yet.</p>
+              <div className="text-center py-16 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                <FaCalendar className="text-4xl mx-auto mb-4 opacity-30 text-indigo-600" />
+                <p className="text-sm font-bold text-slate-500">No shifts available yet.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,19 +344,19 @@ export default function Marketplace() {
                   <motion.button key={`${shift.test_date}-${shift.test_time}-${shift.subject}`}
                     onClick={() => openShift(shift)}
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-left hover:border-indigo-600 transition">
+                    whileHover={{ scale: 1.01 }}
+                    className="bg-white border border-slate-100 rounded-3xl p-6 text-left hover:border-indigo-600 hover:shadow-sm transition duration-200">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h3 className="text-lg font-bold text-white">{shift.subject}</h3>
-                        <p className="text-sm text-gray-400 mt-1">{shift.test_date} · {shift.test_time}</p>
+                        <h3 className="text-base font-extrabold text-indigo-950">{shift.subject}</h3>
+                        <p className="text-xs font-semibold text-slate-400 mt-1">{shift.test_date} · {shift.test_time}</p>
                       </div>
-                      <span className="bg-indigo-900/50 text-indigo-400 text-sm font-bold px-3 py-1 rounded-full">
+                      <span className="bg-indigo-50 text-indigo-600 text-[10px] font-extrabold px-3 py-1 rounded-full border border-indigo-150">
                         {shift.question_count} Qs
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-indigo-400 text-sm font-medium group">
-                      View Questions <FaChartLine className="group-hover:translate-x-1 transition" />
+                    <div className="flex items-center gap-1 text-indigo-600 text-xs font-bold group">
+                      View Questions <FaChartLine className="text-[10px] group-hover:translate-x-0.5 transition" />
                     </div>
                   </motion.button>
                 ))}
@@ -432,27 +375,26 @@ export default function Marketplace() {
         <Head>
           <title>{selectedExam.name} — Question Bank | RankVeda</title>
         </Head>
-        <div className="min-h-screen bg-gray-950 text-white">
-          <NavBar user={user} />
+        <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
+          <NavBar user={currentUser} />
           <div className="max-w-5xl mx-auto px-4 py-8">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-              <button onClick={() => setSelectedShift(null)}
-                className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center gap-1">
-                ← Back to Shifts
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-2xl font-bold">{selectedExam.name}</h1>
-                <p className="text-gray-400 text-sm mt-0.5">{selectedShift.subject} · {selectedShift.test_date} {selectedShift.test_time}</p>
+                <button onClick={() => setSelectedShift(null)}
+                  className="text-indigo-600 hover:text-indigo-500 text-xs font-bold uppercase tracking-wider flex items-center gap-1 mb-2">
+                  ← Back to Shifts
+                </button>
+                <h1 className="text-2xl font-extrabold text-indigo-950">{selectedExam.name}</h1>
+                <p className="text-slate-500 text-xs mt-0.5">{selectedShift.subject} · {selectedShift.test_date} {selectedShift.test_time}</p>
               </div>
-              {!selectedExam.is_purchased && (
+              {!selectedExam.is_purchased ? (
                 <button onClick={() => buyItem(selectedExam, 'exam')}
-                  className="ml-auto flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold text-sm">
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 text-white font-bold text-xs shadow-md">
                   <FaShoppingCart /> Unlock — {selectedExam.price} Points
                 </button>
-              )}
-              {selectedExam.is_purchased && (
-                <div className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-green-900/40 border border-green-700 text-green-400 text-sm font-medium">
+              ) : (
+                <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 text-xs font-bold">
                   <FaUnlock /> Purchased ✅
                 </div>
               )}
@@ -461,15 +403,15 @@ export default function Marketplace() {
             {/* Search + Download */}
             <div className="space-y-3 mb-6">
               <div className="relative">
-                <FaSearch className="absolute left-4 top-3.5 text-gray-500" />
+                <FaSearch className="absolute left-4 top-3.5 text-slate-400 text-sm" />
                 <input
                   value={search}
                   onChange={e => { setSearch(e.target.value); loadQuestions(selectedExam.id, 1, e.target.value, selectedShift); }}
                   placeholder="Search questions in this shift..."
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-slate-200 text-sm text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
-              <button onClick={handleDownload} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white flex items-center gap-2">
+              <button onClick={handleDownload} className="rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2.5 text-xs font-bold text-white flex items-center gap-2 shadow-sm">
                 ⬇ Download {selectedShift.subject} Shift ({selectedShift.question_count} Qs)
               </button>
             </div>
@@ -477,7 +419,7 @@ export default function Marketplace() {
             {/* Questions List */}
             {qLoading ? (
               <div className="flex justify-center py-16">
-                <div className="animate-spin w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
               </div>
             ) : (
               <div className="space-y-4">
@@ -485,13 +427,13 @@ export default function Marketplace() {
                   <motion.div key={q.id}
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-indigo-800 transition">
+                    className="bg-white border border-slate-100 rounded-3xl p-5 hover:border-slate-200 transition shadow-sm">
                     <div className="flex items-start gap-3 mb-4">
-                      <input type="checkbox" checked={selectedIds.includes(q.id)} onChange={() => toggleSelect(q.id)} className="mt-1 accent-indigo-500" />
-                      <span className="bg-indigo-900/50 text-indigo-400 text-xs font-bold px-2.5 py-1 rounded-full shrink-0 mt-0.5">
+                      <input type="checkbox" checked={selectedIds.includes(q.id)} onChange={() => toggleSelect(q.id)} className="mt-1.5 accent-indigo-650 rounded border-slate-300" />
+                      <span className="bg-indigo-50 text-indigo-600 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-indigo-100 shrink-0 mt-0.5">
                         Q{i + 1 + (page - 1) * 20}
                       </span>
-                      <p className="text-gray-200 leading-relaxed text-sm flex-1">{q.question_text}</p>
+                      <p className="text-slate-850 font-bold leading-relaxed text-sm flex-1">{q.question_text}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -502,47 +444,47 @@ export default function Marketplace() {
                         const isLocked = q.is_locked;
 
                         return (
-                          <div key={opt} className={`relative px-4 py-2.5 rounded-xl border text-sm flex items-center gap-2 overflow-hidden
-                            ${isCorrect ? 'border-green-500 bg-green-900/20 text-green-300' :
-                              isLocked ? 'border-gray-700 bg-gray-800/50' : 'border-gray-700 bg-gray-800/40 text-gray-300'}`}>
-                            <span style={{ color: OPTION_COLORS[label] }} className="font-bold text-xs shrink-0">{label}.</span>
+                          <div key={opt} className={`relative px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 overflow-hidden
+                            ${isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-800' :
+                              isLocked ? 'border-slate-100 bg-slate-50 text-slate-400' : 'border-slate-100 bg-white text-slate-700'}`}>
+                            <span style={{ color: OPTION_COLORS[label] }} className="font-extrabold shrink-0">{label}.</span>
                             {isLocked ? (
-                              <span className="flex items-center gap-1.5 text-gray-600 blur-sm select-none">
+                              <span className="flex items-center gap-1.5 text-slate-350 blur-[3px] select-none">
                                 ••••••••••••••
                               </span>
                             ) : (
                               <span>{text}</span>
                             )}
-                            {isCorrect && <FaCheck className="ml-auto text-green-400 shrink-0" />}
+                            {isCorrect && <FaCheck className="ml-auto text-emerald-600 shrink-0 text-[10px]" />}
                           </div>
                         );
                       })}
                     </div>
 
                     {q.is_locked && (
-                      <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                        <FaLock /> Unlock to view answer
+                      <div className="mt-3 flex items-center gap-1.5 text-xs text-orange-500 font-bold">
+                        <FaLock className="text-[10px]" /> <span>Unlock to view answer</span>
                       </div>
                     )}
 
                     <div className="mt-3 flex gap-2 flex-wrap">
                       {q.shift_info?.subject && (
-                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-extrabold bg-slate-50 text-slate-400 px-2.5 py-1 rounded-full border border-slate-100">
                           {q.shift_info.subject}
                         </span>
                       )}
                       {q.shift_info?.test_date && (
-                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-extrabold bg-slate-50 text-slate-400 px-2.5 py-1 rounded-full border border-slate-100">
                           {q.shift_info.test_date}
                         </span>
                       )}
                       {q.shift_info?.test_time && (
-                        <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-extrabold bg-slate-50 text-slate-400 px-2.5 py-1 rounded-full border border-slate-100">
                           {q.shift_info.test_time}
                         </span>
                       )}
                       {q.shift_count > 1 && (
-                        <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-extrabold bg-purple-50 text-purple-600 px-2.5 py-1 rounded-full border border-purple-100">
                           +{q.shift_count - 1} shifts
                         </span>
                       )}
@@ -553,19 +495,19 @@ export default function Marketplace() {
             )}
 
             <div className="mt-6 flex items-center justify-between gap-3 flex-wrap">
-              <div className="text-sm text-gray-400">
+              <div className="text-xs font-bold text-slate-400">
                 {selectedIds.length > 0 ? `${selectedIds.length} selected for quick export` : 'Select questions for bulk actions'}
               </div>
               {totalPages > 1 && (
                 <div className="flex justify-center gap-2 flex-wrap">
                   <button onClick={() => { setPage(p => Math.max(1, p - 1)); loadQuestions(selectedExam.id, Math.max(1, page - 1), search, filters); }}
-                    disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">‹</button>
+                    disabled={page === 1} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 disabled:opacity-40 text-xs font-bold">‹</button>
                   {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map(p => (
                     <button key={p} onClick={() => { setPage(p); loadQuestions(selectedExam.id, p, search, filters); }}
-                      className={`px-3 py-1.5 rounded-lg text-sm ${page === p ? 'bg-indigo-600' : 'bg-gray-800 hover:bg-gray-700'}`}>{p}</button>
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold ${page === p ? 'bg-indigo-650 text-white' : 'bg-white border border-slate-200 hover:bg-slate-50'}`}>{p}</button>
                   ))}
                   <button onClick={() => { setPage(p => Math.min(totalPages, p + 1)); loadQuestions(selectedExam.id, Math.min(totalPages, page + 1), search, filters); }}
-                    disabled={page === totalPages} className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-sm">›</button>
+                    disabled={page === totalPages} className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 disabled:opacity-40 text-xs font-bold">›</button>
                 </div>
               )}
             </div>
@@ -583,24 +525,24 @@ export default function Marketplace() {
         <meta name="description" content="Question Bank for all competitive exams. RRB NTPC, SSC, Banking — all shifts questions at one place." />
       </Head>
 
-      <div className="min-h-screen bg-gray-950 text-white">
+      <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
         <NavBar user={currentUser} />
 
         {/* Hero */}
         <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 via-purple-900/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50/30" />
           <div className="max-w-5xl mx-auto px-4 py-16 text-center relative">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <span className="inline-flex items-center gap-2 bg-indigo-900/40 border border-indigo-700/50 text-indigo-400 text-sm px-4 py-1.5 rounded-full mb-4">
+              <span className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-extrabold px-4 py-1.5 rounded-full mb-4">
                 <FaBookOpen className="text-xs" /> Premium Question Bank
               </span>
-              <h1 className="text-4xl md:text-5xl font-extrabold mb-4">
+              <h1 className="text-4xl md:text-5xl font-extrabold text-indigo-950 tracking-tight mb-4">
                 Exam Question Bank{' '}
-                <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                <span className="text-indigo-600">
                   Marketplace
                 </span>
               </h1>
-              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              <p className="text-slate-500 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
                 All shifts questions, correct answers and AI solutions — at one place.
                 Spend points, get unlimited access.
               </p>
@@ -610,38 +552,38 @@ export default function Marketplace() {
 
         {/* Points Packs Section */}
         <div className="max-w-5xl mx-auto px-4 pb-8">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold mb-2">💎 Buy Points Packs</h2>
-              <p className="text-gray-400 text-sm">Purchase points to unlock detailed AI explanations</p>
+              <h2 className="text-xl font-extrabold text-indigo-950 mb-1">💎 Buy Points Packs</h2>
+              <p className="text-slate-500 text-xs">Purchase points to unlock detailed AI explanations</p>
             </div>
             {currentUser && (
-              <span className="text-sm bg-yellow-950/40 border border-yellow-700/50 text-yellow-400 px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5">
+              <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3.5 py-1.5 rounded-xl font-extrabold flex items-center gap-1.5 select-none shadow-sm shadow-amber-100">
                 <FaCoins /> {currentUser.balance || 0} Points
               </span>
             )}
           </div>
           {pointsPacksLoading ? (
             <div className="flex justify-center py-10">
-              <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+              <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
             </div>
           ) : pointsPacks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 bg-gray-900/40 border border-gray-800 rounded-2xl">
-              <p>No points packs configured yet.</p>
+            <div className="text-center py-8 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+              <p className="text-sm font-bold text-slate-500">No points packs configured yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               {pointsPacks.map((pack) => (
-                <motion.div key={pack.id} whileHover={{ y: -3 }} className="bg-gray-900 border border-gray-800 hover:border-yellow-600/30 rounded-2xl p-5 flex flex-col justify-between transition duration-200">
+                <motion.div key={pack.id} whileHover={{ y: -2 }} className="bg-white border border-slate-100 rounded-3xl p-5 flex flex-col justify-between transition duration-200 shadow-sm">
                   <div>
-                    <h3 className="text-sm font-bold text-white mb-1.5">{pack.name}</h3>
+                    <h3 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">{pack.name}</h3>
                     <div className="flex items-baseline gap-1.5 my-3">
-                      <span className="text-3xl font-black text-yellow-400">{pack.points}</span>
-                      <span className="text-xs text-gray-500 font-medium">Points</span>
+                      <span className="text-3xl font-black text-amber-500">{pack.points}</span>
+                      <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Points</span>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <button onClick={() => buyItem(pack, 'pointspack')} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-gray-950 font-extrabold text-sm shadow-lg shadow-amber-500/10 active:scale-[0.98] transition-all">
+                    <button onClick={() => buyItem(pack, 'pointspack')} className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-905 font-extrabold text-xs shadow-sm">
                       Buy for ₹{pack.price}
                     </button>
                   </div>
@@ -654,56 +596,58 @@ export default function Marketplace() {
         {/* Pack Cards */}
         <div className="max-w-5xl mx-auto px-4 pb-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">📦 Question Bank Packs</h2>
-            <p className="text-gray-400 text-sm">Buy a bundle of exams at once and unlock every exam inside the pack.</p>
+            <h2 className="text-xl font-extrabold text-indigo-950 mb-1">📦 Question Bank Packs</h2>
+            <p className="text-slate-500 text-xs">Buy a bundle of exams at once and unlock every exam inside the pack.</p>
           </div>
           {packsLoading ? (
             <div className="flex justify-center py-10">
-              <div className="animate-spin w-10 h-10 border-2 border-indigo-500 border-t-transparent rounded-full" />
+              <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
             </div>
           ) : packs.length === 0 ? (
-            <div className="text-center py-10 text-gray-500 bg-gray-900/50 border border-gray-800 rounded-2xl">
-              <p>No pack offers available yet.</p>
+            <div className="text-center py-10 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+              <p className="text-sm font-bold text-slate-500">No pack offers available yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
               {packs.map((pack, i) => (
-                <motion.div key={pack.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-bold">{pack.name}</h3>
-                      <p className="text-sm text-gray-400 mt-2">{pack.description || 'Bundle multiple exams into one unlock.'}</p>
+                <motion.div key={pack.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-extrabold text-indigo-950">{pack.name}</h3>
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">{pack.description || 'Bundle multiple exams into one unlock.'}</p>
+                      </div>
+                      {pack.purchased ? (
+                        <span className="text-[10px] font-extrabold px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600">Purchased</span>
+                      ) : (
+                        <span className="text-[10px] font-extrabold px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600">₹{pack.price || 0}</span>
+                      )}
                     </div>
-                    {pack.purchased ? (
-                      <span className="text-xs px-3 py-1.5 rounded-full bg-green-900/40 border border-green-700 text-green-400">Purchased</span>
-                    ) : (
-                      <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-900/30 border border-emerald-700 text-emerald-400">₹{pack.price || 0}</span>
-                    )}
-                  </div>
-                  <div className="mt-4 text-sm text-gray-400">Includes {(pack.exam_ids || []).length} exams</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-sm text-gray-200">
-                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
-                      <div className="text-[10px] text-gray-400">Students</div>
-                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.student_count, pack.purchased)}</div>
-                    </div>
-                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
-                      <div className="text-[10px] text-gray-400">Questions</div>
-                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.question_count, pack.purchased)}</div>
-                    </div>
-                    <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3">
-                      <div className="text-[10px] text-gray-400">Sets</div>
-                      <div className="text-lg font-semibold mt-1">{maskMetric(pack.set_count, pack.purchased)}</div>
+                    <div className="mt-4 text-xs font-bold text-slate-400">Includes {(pack.exam_ids || []).length} exams</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 text-sm text-gray-200">
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Students</div>
+                        <div className="text-base font-extrabold text-indigo-950 mt-1">{maskMetric(pack.student_count, pack.purchased)}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Questions</div>
+                        <div className="text-base font-extrabold text-indigo-950 mt-1">{maskMetric(pack.question_count, pack.purchased)}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                        <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Sets</div>
+                        <div className="text-base font-extrabold text-indigo-950 mt-1">{maskMetric(pack.set_count, pack.purchased)}</div>
+                      </div>
                     </div>
                   </div>
                   <div className="mt-5 flex flex-col sm:flex-row gap-3">
                     {pack.purchased ? (
                       <Link href={`/marketplace/packs/${pack.id}/analysis`} className="w-full">
-                        <button className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm">
-                          View Access & Marks Analysis
+                        <button className="w-full py-2.5 rounded-xl bg-emerald-650 hover:bg-emerald-600 text-white font-extrabold text-xs shadow-sm">
+                          View Access &amp; Marks Analysis
                         </button>
                       </Link>
                     ) : (
-                      <button onClick={() => buyItem(pack, 'pack')} className="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm">
+                      <button onClick={() => buyItem(pack, 'pack')} className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-sm">
                         Unlock Pack — ₹{pack.price || 0}
                       </button>
                     )}
@@ -719,12 +663,12 @@ export default function Marketplace() {
           <div className="max-w-5xl mx-auto px-4 pb-16">
             {loading ? (
               <div className="flex justify-center py-20">
-                <div className="animate-spin w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
               </div>
             ) : exams.length === 0 ? (
-              <div className="text-center py-20 text-gray-500">
-                <FaBookOpen className="text-5xl mx-auto mb-4 opacity-30" />
-                <p>No exams available yet. Coming soon!</p>
+              <div className="text-center py-20 text-slate-400 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                <FaBookOpen className="text-5xl mx-auto mb-4 opacity-30 text-indigo-600" />
+                <p className="text-sm font-bold text-slate-500">No exams available yet. Coming soon!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -734,25 +678,25 @@ export default function Marketplace() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1 }}
-                    className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-indigo-700 transition group"
+                    className="bg-white border border-slate-100 rounded-3xl overflow-hidden hover:border-indigo-100 hover:shadow-sm transition duration-200 group flex flex-col justify-between"
                   >
                     <div className="p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h2 className="text-lg font-bold group-hover:text-indigo-300 transition">{exam.name}</h2>
-                          <div className="flex items-center gap-3 mt-2 text-sm text-gray-400">
-                            <span className="flex items-center gap-1"><FaCalendar className="text-xs" /> {exam.date}</span>
+                          <h2 className="text-base font-extrabold text-indigo-950 group-hover:text-indigo-600 transition">{exam.name}</h2>
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                            <span className="flex items-center gap-1 font-semibold"><FaCalendar className="text-[10px]" /> {exam.date}</span>
                             <span>·</span>
-                            <span>{exam.shifts || 1} Shifts</span>
+                            <span className="font-bold text-slate-500">{exam.shifts || 1} Shifts</span>
                           </div>
                         </div>
                         {exam.purchased ? (
-                          <span className="flex items-center gap-1 bg-green-900/40 border border-green-700/50 text-green-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-medium">
-                            <FaUnlock className="text-xs" /> Purchased
+                          <span className="flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-600 text-[10px] font-extrabold px-3 py-1 rounded-full shrink-0">
+                            <FaUnlock className="text-[10px]" /> Purchased
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 bg-amber-900/30 border border-amber-700/40 text-amber-400 text-xs px-3 py-1.5 rounded-full shrink-0 font-semibold">
-                            <FaCoins className="text-xs" /> {exam.price} pts
+                          <span className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold px-3 py-1 rounded-full shrink-0 select-none shadow-sm shadow-amber-100">
+                            <FaCoins className="text-[10px]" /> {exam.price} pts
                           </span>
                         )}
                       </div>
@@ -763,9 +707,9 @@ export default function Marketplace() {
                           { label: 'Subjects', value: exam.subjects?.length || '—' },
                           { label: 'Shifts', value: exam.shifts || 1 },
                         ].map(s => (
-                          <div key={s.label} className="bg-gray-800/60 rounded-xl px-3 py-2 text-center">
-                            <div className="text-lg font-bold text-white">{s.value}</div>
-                            <div className="text-xs text-gray-500">{s.label}</div>
+                          <div key={s.label} className="bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2 text-center">
+                            <div className="text-base font-extrabold text-indigo-950">{s.value}</div>
+                            <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">{s.label}</div>
                           </div>
                         ))}
                       </div>
@@ -773,7 +717,7 @@ export default function Marketplace() {
                       {exam.subjects && exam.subjects.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1.5">
                           {exam.subjects.slice(0, 4).map(s => (
-                            <span key={s} className="text-xs bg-indigo-900/30 text-indigo-400 border border-indigo-800/50 px-2 py-0.5 rounded-full">{s}</span>
+                            <span key={s} className="text-[10px] font-extrabold bg-indigo-50/50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded-full">{s}</span>
                           ))}
                         </div>
                       )}
@@ -782,21 +726,21 @@ export default function Marketplace() {
                     <div className="px-6 pb-5 flex gap-3">
                       <button
                         onClick={() => openExam(exam)}
-                        className="flex-1 py-2.5 rounded-xl border border-gray-700 hover:border-indigo-600 text-sm font-medium text-gray-300 hover:text-indigo-300 transition"
+                        className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-650 hover:bg-slate-50/30 text-xs font-bold text-slate-500 hover:text-indigo-600 transition"
                       >
                         View Questions
                       </button>
                       {!exam.purchased ? (
                         <button
                           onClick={() => buyItem(exam, 'exam')}
-                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition"
+                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition shadow-sm"
                         >
                           <FaShoppingCart className="text-xs" /> Unlock
                         </button>
                       ) : (
                         <button
                           onClick={() => openExam(exam)}
-                          className="flex-1 py-2.5 rounded-xl bg-green-800/40 border border-green-700 text-green-400 font-semibold text-sm flex items-center justify-center gap-2"
+                          className="flex-1 py-2.5 rounded-xl bg-emerald-50 border border-emerald-250 text-emerald-600 font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm"
                         >
                           <FaUnlock className="text-xs" /> Full Access
                         </button>
@@ -813,31 +757,31 @@ export default function Marketplace() {
       {/* Buy Modal */}
       <AnimatePresence>
         {buyModal && (
-          <motion.div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4"
+          <motion.div className="fixed inset-0 bg-indigo-950/40 backdrop-blur-sm flex items-center justify-center z-50 px-4"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full"
-              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
-              <h3 className="text-xl font-bold mb-2">🛒 Confirm Purchase</h3>
-              <p className="text-gray-400 text-sm mb-4">Unlock {buyModal.name} {buyModal.kind === 'pointspack' ? 'Points Bundle' : 'Question Bank'}.</p>
-              <div className="bg-gray-800 rounded-xl p-4 mb-5 flex justify-between items-center">
-                <span className="text-gray-300">Price</span>
-                <span className="text-amber-400 font-bold text-lg flex items-center gap-1">
-                  {buyModal.kind === 'pointspack' ? `₹${buyModal.price}` : <><FaCoins /> {buyModal.price} Points</>}
+            <motion.div className="bg-white border border-slate-100 rounded-3xl p-6 max-w-sm w-full shadow-lg"
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}>
+              <h3 className="text-lg font-extrabold text-indigo-950 mb-2">🛒 Confirm Purchase</h3>
+              <p className="text-slate-500 text-xs mb-4 leading-relaxed">Unlock {buyModal.name} {buyModal.kind === 'pointspack' ? 'Points Bundle' : 'Question Bank'}.</p>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 mb-5 flex justify-between items-center shadow-sm">
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Price</span>
+                <span className="text-amber-500 font-extrabold text-base flex items-center gap-1">
+                  {buyModal.kind === 'pointspack' ? `₹${buyModal.price}` : <><FaCoins className="text-xs" /> {buyModal.price} Points</>}
                 </span>
               </div>
               {buyMsg && (
-                <div className={`mb-4 text-sm px-4 py-3 rounded-xl ${buyMsg.startsWith('✅') ? 'bg-green-900/40 text-green-300 border border-green-700' : 'bg-red-900/40 text-red-300 border border-red-700'}`}>
+                <div className={`mb-4 text-xs font-semibold px-4 py-3 rounded-xl ${buyMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                   {buyMsg}
                 </div>
               )}
               {!buyMsg.startsWith('✅') && (
                 <div className="flex gap-3">
                   <button onClick={() => setBuyModal(null)}
-                    className="flex-1 py-2.5 rounded-xl border border-gray-700 text-gray-300 hover:border-gray-600 text-sm">
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 text-xs font-bold transition">
                     Cancel
                   </button>
                   <button onClick={confirmBuy} disabled={buying}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 hover:from-indigo-600 hover:to-purple-500 text-white font-extrabold text-xs disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm">
                     {buying ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : '✅ Confirm'}
                   </button>
                 </div>
@@ -851,36 +795,5 @@ export default function Marketplace() {
 }
 
 function NavBar({ user }) {
-  const router = useRouter();
-  const logout = () => {
-    localStorage.removeItem('rv_token');
-    localStorage.removeItem('rv_user');
-    router.push('/');
-  };
-  return (
-    <nav className="border-b border-gray-800 bg-gray-950/90 backdrop-blur-sm sticky top-0 z-40">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="text-xl font-extrabold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-          RankVeda
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/marketplace" className="text-sm text-indigo-400 font-medium">🏪 Marketplace</Link>
-          {user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-xs bg-amber-900/40 border border-amber-700/50 text-amber-400 px-3 py-1.5 rounded-full flex items-center gap-1">
-                <FaCoins className="text-xs" /> {user.balance || 0}
-              </span>
-              <button onClick={logout} className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-gray-700 hover:border-gray-600">
-                Logout
-              </button>
-            </div>
-          ) : (
-            <Link href="/login" className="text-sm flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded-lg font-medium transition">
-              <FaUser className="text-xs" /> Login
-            </Link>
-          )}
-        </div>
-      </div>
-    </nav>
-  );
+  return <Navbar user={user} />;
 }
