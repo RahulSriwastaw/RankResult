@@ -285,14 +285,27 @@ def parse_result_html(html, base_url=None):
                 val = tds[1].get_text(strip=True)
                 _process_kv_pair(raw_key, val)
 
-    img_tag = soup.find('img')
-    if img_tag and img_tag.has_attr('src'):
-        src = str(img_tag['src'])
-        if not src.startswith('http'):
-            result['photo_url'] = 'https://rrb.digialm.com' + src
-        else:
-            result['photo_url'] = src
-    result['application_photograph'] = result['photo_url']
+    candidate_photos = []
+    for img in soup.find_all('img'):
+        src = img.get('src', '')
+        img_class = img.get('class', [])
+        if not isinstance(img_class, list):
+            img_class = [img_class]
+        
+        if src.startswith('data:image/') and 'Wirisformula' not in img_class and 'wirisformula' not in img_class:
+            candidate_photos.append(src)
+        elif not src.startswith('data:') and not any(x in src.lower() for x in ['tick.png', 'cross.png', 'banner', 'logo', 'wrong.png', 'right.png']):
+            if not src.startswith('http'):
+                resolved = urllib.parse.urljoin(base_url or 'https://rrb.digialm.com/', src)
+            else:
+                resolved = src
+            candidate_photos.append(resolved)
+
+    if candidate_photos:
+        result['photo_url'] = candidate_photos[0]
+        result['application_photograph'] = candidate_photos[0]
+        if len(candidate_photos) > 1:
+            result['application_photograph'] = candidate_photos[1]
 
     candidate_fields = _collect_generic_html_fields(soup.find('table', class_='main-info-tbl') or soup)
     if candidate_fields:
