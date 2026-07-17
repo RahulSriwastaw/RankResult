@@ -114,23 +114,35 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
         </div>
       </div>
 
-      {/* ── CANDIDATE DETAILS TABLE ─────────────────────────────────────── */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(9px, 2.5vw, 12px)', borderBottom: '1px solid #cbd5e1' }}>
+      {/* ── CANDIDATE DETAILS ──────────────────────────────────────────── */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #cbd5e1', fontSize: 'clamp(9px, 2.2vw, 13px)' }}>
         <tbody>
           {[
-            ['Candidate Name', candidate?.name || 'RAHUL KUMAR'],
-            ['Registration Number', candidate?.registration_no || '072501113424'],
-            ['Roll Number', candidate?.roll_number || '247252191871283'],
-            ['Community / Category', candidate?.community || 'UR'],
-            ['Test Centre', candidate?.test_centre_name || 'Dewa Mahila Mahavidyalaya'],
-            ['Exam Date', candidate?.test_date || '18/06/2026'],
-            ['Exam Time / Shift', candidate?.test_time || '12:45 PM - 2:15 PM'],
-          ].map(([label, value], idx) => (
-            <tr key={idx} style={{ borderBottom: idx < 6 ? '1px solid #e2e8f0' : 'none' }}>
-              <td style={{ padding: '6px 12px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderRight: '1px solid #e2e8f0', width: '40%' }}>{label}</td>
-              <td style={{ padding: '6px 12px', fontWeight: '800', color: '#0f172a', fontFamily: label.includes('Number') ? 'monospace' : 'inherit' }}>{value}</td>
+            [
+              { label: 'Candidate Name', value: candidate?.name || 'RAHUL KUMAR' },
+              { label: 'Registration No.', value: candidate?.registration_no || '072501113424' }
+            ],
+            [
+              { label: 'Roll Number', value: candidate?.roll_number || '247252191871283' },
+              { label: 'Category', value: candidate?.community || 'UR' }
+            ],
+            [
+              { label: 'Exam Date', value: candidate?.test_date || '18/06/2026' },
+              { label: 'Exam Time', value: candidate?.test_time || '12:45 PM - 2:15 PM' }
+            ]
+          ].map((row, idx) => (
+            <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '6px 8px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderRight: '1px solid #e2e8f0', width: '20%' }}>{row[0].label}</td>
+              <td style={{ padding: '6px 8px', fontWeight: '800', color: '#0f172a', borderRight: '1px solid #e2e8f0', width: '30%', fontFamily: row[0].label.includes('No') ? 'monospace' : 'inherit' }}>{row[0].value}</td>
+              <td style={{ padding: '6px 8px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderRight: '1px solid #e2e8f0', width: '20%' }}>{row[1].label}</td>
+              <td style={{ padding: '6px 8px', fontWeight: '800', color: '#0f172a', width: '30%', fontFamily: row[1].label.includes('No') ? 'monospace' : 'inherit' }}>{row[1].value}</td>
             </tr>
           ))}
+          {/* Test Centre row spanning remaining columns */}
+          <tr>
+            <td style={{ padding: '6px 8px', fontWeight: '700', color: '#475569', background: '#f8fafc', borderRight: '1px solid #e2e8f0', width: '20%' }}>Test Centre</td>
+            <td colSpan="3" style={{ padding: '6px 8px', fontWeight: '800', color: '#0f172a' }}>{candidate?.test_centre_name || 'Dewa Mahila Mahavidyalaya'}</td>
+          </tr>
         </tbody>
       </table>
 
