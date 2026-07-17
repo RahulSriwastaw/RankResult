@@ -134,7 +134,7 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
       <div className="flex items-center justify-between p-3.5 cursor-pointer select-none bg-slate-50/50 hover:bg-slate-100/50 transition" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-bold text-slate-500 bg-slate-200/70 px-2 py-1 rounded-md w-9 text-center shrink-0">Q{q.question_no}</span>
-          <span className="text-sm font-semibold text-slate-800 truncate" dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></span>
+          <span className={`text-sm font-semibold text-slate-800 ${expanded ? 'whitespace-normal break-words' : 'truncate'}`} dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           <span className={`text-xs px-2.5 py-0.5 rounded-full text-white font-bold shadow-xs ${badge[status]}`}>
