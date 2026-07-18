@@ -505,7 +505,14 @@ def update_exam(exam_id):
 def delete_exam(exam_id):
     """Delete an exam and all related data."""
     try:
+        from db.models import ExamResult
         exam = Exam.query.get_or_404(exam_id)
+        
+        # Explicitly clean up results to ensure MasterQuestion orphans are removed
+        results = ExamResult.query.filter_by(exam_id=exam_id).all()
+        for r in results:
+            _delete_result_properly(r)
+            
         db.session.delete(exam)
         db.session.commit()
         return jsonify({'success': True})
@@ -519,6 +526,7 @@ def delete_exam(exam_id):
 def bulk_delete_exams():
     """Bulk delete exams by IDs."""
     try:
+        from db.models import ExamResult
         data = request.get_json() or {}
         ids = data.get('ids', [])
         if not ids:
@@ -532,6 +540,9 @@ def bulk_delete_exams():
                 continue
             exam = Exam.query.get(eid_int)
             if exam:
+                results = ExamResult.query.filter_by(exam_id=eid_int).all()
+                for r in results:
+                    _delete_result_properly(r)
                 db.session.delete(exam)
                 deleted_count += 1
 
@@ -758,13 +769,48 @@ def get_result(result_id):
         print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
+def _delete_result_properly(result):
+    from db.models import QuestionResponse, MasterQuestion, ExamResult, db
+    # Explicitly get and delete responses to clean up MasterQuestions
+    responses = QuestionResponse.query.filter_by(result_id=result.id).all()
+    for resp in responses:
+        mq_id = resp.master_question_id
+        mq = MasterQuestion.query.get(mq_id)
+        
+        # Decrement stats if this is the ONLY remaining response for this roll_number
+        same_roll_count = QuestionResponse.query.join(ExamResult).filter(
+            QuestionResponse.master_question_id == mq_id,
+            ExamResult.roll_number == result.roll_number
+        ).count()
+        if same_roll_count <= 1 and mq:
+            if resp.status == 'correct':
+                mq.correct_count = max(0, (mq.correct_count or 0) - 1)
+            elif resp.status == 'wrong':
+                mq.wrong_count = max(0, (mq.wrong_count or 0) - 1)
+            else:
+                mq.unattempted_count = max(0, (mq.unattempted_count or 0) - 1)
+
+        db.session.delete(resp)
+        db.session.flush() # ensure response is gone
+        
+        # Now check if this MasterQuestion has any other responses
+        other_responses = QuestionResponse.query.filter_by(master_question_id=mq_id).first()
+        if not other_responses:
+            if mq:
+                db.session.delete(mq)
+        else:
+            if mq:
+                mq.reference_count = max(0, (mq.reference_count or 0) - 1)
+                
+    db.session.delete(result)
+
 
 @admin_bp.route('/results/<int:result_id>', methods=['DELETE'])
 def delete_result(result_id):
     """Delete a result and its questions."""
     try:
         result = ExamResult.query.get_or_404(result_id)
-        db.session.delete(result)
+        _delete_result_properly(result)
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -790,7 +836,7 @@ def bulk_delete_results():
                 continue
             result = ExamResult.query.get(rid_int)
             if result:
-                db.session.delete(result)
+                _delete_result_properly(result)
                 deleted_count += 1
 
         db.session.commit()
@@ -923,6 +969,9 @@ def list_master_questions():
                 'reference_count': mq.reference_count,
                 'shift_count': mq.shift_count,
                 'shifts': shifts,
+                'correct_count': mq.correct_count,
+                'wrong_count': mq.wrong_count,
+                'unattempted_count': mq.unattempted_count,
                 'has_solution': sol is not None,
                 'created_at': mq.created_at.isoformat() if mq.created_at else None,
                 'updated_at': mq.updated_at.isoformat() if mq.updated_at else None,
@@ -990,11 +1039,18 @@ def get_master_question(mq_id):
             'option_d_text': mq.option_d_text,
             'option_d_hin': mq.option_d_hin,
             'option_d_eng': mq.option_d_eng,
+            'option_a_id': mq.option_a_id,
+            'option_b_id': mq.option_b_id,
+            'option_c_id': mq.option_c_id,
+            'option_d_id': mq.option_d_id,
             'solution_hin': mq.solution_hin,
             'solution_eng': mq.solution_eng,
             'reference_count': mq.reference_count,
             'shift_count': mq.shift_count,
             'shifts': mq.shifts or [],
+            'correct_count': mq.correct_count,
+            'wrong_count': mq.wrong_count,
+            'unattempted_count': mq.unattempted_count,
             'has_solution': sol is not None,
             'solution': {
                 'explanation': sol.explanation,
@@ -1025,10 +1081,10 @@ def update_master_question(mq_id):
             'correct_answer', 'correct_option_text', 'question_id_html',
             'question_text_hin', 'question_text_eng',
             'subject', 'chapter', 'question_type', 'difficulty',
-            'option_a_text', 'option_a_hin', 'option_a_eng',
-            'option_b_text', 'option_b_hin', 'option_b_eng',
-            'option_c_text', 'option_c_hin', 'option_c_eng',
-            'option_d_text', 'option_d_hin', 'option_d_eng',
+            'option_a_text', 'option_a_hin', 'option_a_eng', 'option_a_id',
+            'option_b_text', 'option_b_hin', 'option_b_eng', 'option_b_id',
+            'option_c_text', 'option_c_hin', 'option_c_eng', 'option_c_id',
+            'option_d_text', 'option_d_hin', 'option_d_eng', 'option_d_id',
             'solution_hin', 'solution_eng',
         ]:
             if field in data:

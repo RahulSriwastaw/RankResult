@@ -1201,10 +1201,12 @@ function Results() {
     }
   };
 
+  const uniqueResults = Array.from(new Map(results.map(r => [`${r.exam_id}-${r.roll_number}`, r])).values());
+
   const exportCSV = () => {
-    if (!results.length) return;
+    if (!uniqueResults.length) return;
     const headers = ['ID', 'Candidate Name', 'Roll No', 'Score', 'Rank', 'Percentile', 'Category', 'Questions', 'Date'];
-    const rows = results.map(r => [r.id, r.candidate_name, r.roll_number, r.score, r.rank, r.percentile, r.category, r.questions_count, r.created_at].join(','));
+    const rows = uniqueResults.map(r => [r.id, r.candidate_name, r.roll_number, r.score, r.rank, r.percentile, r.category, r.questions_count, r.created_at].join(','));
     const csv = [headers.join(','), ...rows].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -1366,8 +1368,8 @@ function Results() {
       </div>
 
       <div className="card overflow-x-auto">
-        <table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header w-10"><input type="checkbox" onChange={e => { if (e.target.checked) setBulkSelected(results.map(r => r.id)); else setBulkSelected([]); }} checked={results.length > 0 && bulkSelected.length === results.length} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></th><th className="table-header">ID</th><th className="table-header">Candidate</th><th className="table-header">Roll / Reg</th><th className="table-header">Subject</th><th className="table-header">Score</th><th className="table-header">Rank</th><th className="table-header">%</th><th className="table-header">Category</th><th className="table-header">Q</th><th className="table-header">Date</th><th className="table-header">Actions</th></tr></thead>
-          <tbody>{loading ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : results.length === 0 ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No results found.</td></tr> : results.map(r => (
+        <table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header w-10"><input type="checkbox" onChange={e => { if (e.target.checked) setBulkSelected(uniqueResults.map(r => r.id)); else setBulkSelected([]); }} checked={uniqueResults.length > 0 && bulkSelected.length === uniqueResults.length} className="w-4 h-4 rounded border-[rgb(var(--border))] text-[rgb(var(--primary))]" /></th><th className="table-header">ID</th><th className="table-header">Candidate</th><th className="table-header">Roll / Reg</th><th className="table-header">Subject</th><th className="table-header">Score</th><th className="table-header">Rank</th><th className="table-header">%</th><th className="table-header">Category</th><th className="table-header">Q</th><th className="table-header">Date</th><th className="table-header">Actions</th></tr></thead>
+          <tbody>{loading ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : uniqueResults.length === 0 ? <tr><td colSpan="11" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">No results found.</td></tr> : uniqueResults.map(r => (
             <tr key={r.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors">
               <td className="table-cell"><input type="checkbox" checked={bulkSelected.includes(r.id)} onChange={() => setBulkSelected(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id])} className="w-4 h-4 rounded" /></td>
               <td className="table-cell text-[rgb(var(--muted-foreground))] font-mono">#{r.id}</td>
@@ -1452,7 +1454,7 @@ function Questions() {
 
   const openDetail = async id => {
     setDetailLoading(true); setSelectedQ(null); setEditMode(false); setAiSuggestion(null); setBulkResults(null);
-    try { const res = await fetch(`${API}/master-questions/${id}`); const data = await res.json(); setSelectedQ(data); setEditData({ question_text: data.question_text || '', correct_answer: data.correct_answer || '', correct_option_text: data.correct_option_text || '', question_id_html: data.question_id_html || '', option_a_text: data.option_a_text || '', option_b_text: data.option_b_text || '', option_c_text: data.option_c_text || '', option_d_text: data.option_d_text || '' }); }
+    try { const res = await fetch(`${API}/master-questions/${id}`); const data = await res.json(); setSelectedQ(data); setEditData({ question_text: data.question_text || '', correct_answer: data.correct_answer || '', correct_option_text: data.correct_option_text || '', question_id_html: data.question_id_html || '', option_a_text: data.option_a_text || '', option_b_text: data.option_b_text || '', option_c_text: data.option_c_text || '', option_d_text: data.option_d_text || '', option_a_id: data.option_a_id || '', option_b_id: data.option_b_id || '', option_c_id: data.option_c_id || '', option_d_id: data.option_d_id || '', subject: data.subject || '', chapter: data.chapter || '', question_type: data.question_type || '', difficulty: data.difficulty || '', question_text_hin: data.question_text_hin || '', question_text_eng: data.question_text_eng || '', option_a_hin: data.option_a_hin || '', option_b_hin: data.option_b_hin || '', option_c_hin: data.option_c_hin || '', option_d_hin: data.option_d_hin || '', option_a_eng: data.option_a_eng || '', option_b_eng: data.option_b_eng || '', option_c_eng: data.option_c_eng || '', option_d_eng: data.option_d_eng || '', solution_hin: data.solution_hin || '', solution_eng: data.solution_eng || '' }); }
     catch (e) { console.error(e); } finally { setDetailLoading(false); }
   };
 
@@ -1499,10 +1501,18 @@ function Questions() {
   if (detailLoading) return <LoadingSpinner />;
 
   if (selectedQ) {
+    const currentIndex = items.findIndex(q => q.id === selectedQ.id);
+    const prevQ = currentIndex > 0 ? items[currentIndex - 1] : null;
+    const nextQ = currentIndex !== -1 && currentIndex < items.length - 1 ? items[currentIndex + 1] : null;
+
     return (
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <button onClick={() => setSelectedQ(null)} className="btn-ghost btn-sm"><FaArrowLeft className="mr-1" /> Back</button>
+          <div className="flex gap-1 border-r border-[rgb(var(--border))] pr-2 mr-1">
+             <button onClick={() => prevQ && openDetail(prevQ.id)} disabled={!prevQ || detailLoading} className="btn-ghost btn-sm text-xs py-1 px-2 h-auto" title="Previous Question">Prev</button>
+             <button onClick={() => nextQ && openDetail(nextQ.id)} disabled={!nextQ || detailLoading} className="btn-ghost btn-sm text-xs py-1 px-2 h-auto" title="Next Question">Next</button>
+          </div>
           <span className="text-sm font-mono text-[rgb(var(--muted-foreground))]">MQ #{selectedQ.id}</span>
           <div className="ml-auto flex gap-1 flex-wrap">
             <button onClick={runAiEdit} disabled={aiLoading} className="btn-ghost btn-sm">{aiLoading ? '...' : '\uD83E\uDD16'} AI</button>
@@ -1517,21 +1527,65 @@ function Questions() {
           <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Answer</p><p className={cn('text-lg font-bold', answerColor[selectedQ.correct_answer] || 'text-emerald-400')}>{selectedQ.correct_answer}</p></div>
           <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">AI Sol</p><p className="text-lg">{selectedQ.has_solution ? '\u2705' : '\u274C'}</p></div>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Question ID</p><p className="text-sm font-bold text-slate-300 font-mono break-all">{selectedQ.question_id_html || 'N/A'}</p></div>
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Correct Option ID</p><p className="text-sm font-bold text-slate-300 font-mono break-all">{selectedQ.correct_answer ? selectedQ[`option_${selectedQ.correct_answer.toLowerCase()}_id`] || 'N/A' : 'N/A'}</p></div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Correct</p><p className="text-lg font-bold text-emerald-400">{selectedQ.correct_count || 0}</p></div>
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Wrong</p><p className="text-lg font-bold text-red-400">{selectedQ.wrong_count || 0}</p></div>
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Skipped</p><p className="text-lg font-bold text-slate-400">{selectedQ.unattempted_count || 0}</p></div>
+        </div>
+        <div className="card p-4 mb-4">
+          <h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase mb-3">Metadata</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+             <div className="flex flex-col gap-1"><span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase">Subject</span>{editMode ? <input value={editData.subject} onChange={e => setEditData(p => ({...p, subject: e.target.value}))} className="input h-7 text-xs" /> : <span className="text-xs">{selectedQ.subject || '-'}</span>}</div>
+             <div className="flex flex-col gap-1"><span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase">Chapter</span>{editMode ? <input value={editData.chapter} onChange={e => setEditData(p => ({...p, chapter: e.target.value}))} className="input h-7 text-xs" /> : <span className="text-xs">{selectedQ.chapter || '-'}</span>}</div>
+             <div className="flex flex-col gap-1"><span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase">Type</span>{editMode ? <input value={editData.question_type} onChange={e => setEditData(p => ({...p, question_type: e.target.value}))} className="input h-7 text-xs" /> : <span className="text-xs">{selectedQ.question_type || '-'}</span>}</div>
+             <div className="flex flex-col gap-1"><span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase">Difficulty</span>{editMode ? <select value={editData.difficulty} onChange={e => setEditData(p => ({...p, difficulty: e.target.value}))} className="input h-7 text-xs"><option value="">-</option><option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option></select> : <span className="text-xs">{selectedQ.difficulty || '-'}</span>}</div>
+          </div>
+        </div>
         <div className="card p-4 mb-4"><h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase mb-2">Question</h3>
-          {editMode ? <textarea value={editData.question_text} onChange={e => setEditData(p => ({ ...p, question_text: e.target.value }))} className="textarea min-h-[80px]" /> : <p className="text-sm leading-relaxed">{selectedQ.question_text}</p>}
+          {editMode ? <textarea value={editData.question_text} onChange={e => setEditData(p => ({ ...p, question_text: e.target.value }))} className="textarea min-h-[80px]" /> : <p className="text-sm leading-relaxed" dangerouslySetInnerHTML={{__html: selectedQ.question_text}} />}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-            {['a', 'b', 'c', 'd'].map(opt => { const key = `option_${opt}_text`; const label = opt.toUpperCase(); const isCorrect = selectedQ.correct_answer === label; return (
-              <div key={opt} className={cn('rounded-lg border p-2.5', isCorrect ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[rgb(var(--border))]')}><span className={cn('font-bold text-xs mr-1', answerColor[label])}>{label}.</span>{editMode ? <input value={editData[key]} onChange={e => setEditData(p => ({ ...p, [key]: e.target.value }))} className="input h-7 text-xs inline w-[80%]" /> : <span className={cn('text-xs', isCorrect ? 'text-emerald-300' : 'text-[rgb(var(--foreground))]')}>{selectedQ[key] || '—'}</span>}{isCorrect && <span className="ml-1 text-[10px] text-emerald-400">\u2713</span>}</div>
+            {['a', 'b', 'c', 'd'].map(opt => { const key = `option_${opt}_text`; const idKey = `option_${opt}_id`; const label = opt.toUpperCase(); const isCorrect = selectedQ.correct_answer === label; return (
+              <div key={opt} className={cn('rounded-lg border p-2.5 flex flex-col gap-1', isCorrect ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-[rgb(var(--border))]')}><div className="flex items-center"><span className={cn('font-bold text-xs mr-1', answerColor[label])}>{label}.</span>{editMode ? <input value={editData[key]} onChange={e => setEditData(p => ({ ...p, [key]: e.target.value }))} className="input h-7 text-xs inline flex-1" /> : <span className={cn('text-xs flex-1', isCorrect ? 'text-emerald-300' : 'text-[rgb(var(--foreground))]')} dangerouslySetInnerHTML={{__html: selectedQ[key] || '-'}} />}{isCorrect && <span className="ml-1 text-[10px] text-emerald-400">\u2713</span>}</div><div className="flex items-center text-[10px] text-[rgb(var(--muted-foreground))] font-mono ml-4"><span className="mr-1">ID:</span>{editMode ? <input value={editData[idKey]} onChange={e => setEditData(p => ({ ...p, [idKey]: e.target.value }))} className="input h-6 text-[10px] py-0 px-1 inline w-24" placeholder="Option ID" /> : <span>{selectedQ[idKey] || 'N/A'}</span>}</div>
+                <div className="flex flex-col gap-1 mt-1 ml-4 pt-1 border-t border-[rgb(var(--border))/50]">
+                  <div className="flex items-center text-[10px]"><span className="w-12 text-[rgb(var(--muted-foreground))]">Hindi:</span>{editMode ? <input value={editData[`option_${opt}_hin`]} onChange={e => setEditData(p => ({ ...p, [`option_${opt}_hin`]: e.target.value }))} className="input h-6 text-[10px] py-0 px-1 inline flex-1" /> : <span className="flex-1 text-[rgb(var(--muted-foreground))]" dangerouslySetInnerHTML={{__html: selectedQ[`option_${opt}_hin`] || '-'}} />}</div>
+                  <div className="flex items-center text-[10px]"><span className="w-12 text-[rgb(var(--muted-foreground))]">English:</span>{editMode ? <input value={editData[`option_${opt}_eng`]} onChange={e => setEditData(p => ({ ...p, [`option_${opt}_eng`]: e.target.value }))} className="input h-6 text-[10px] py-0 px-1 inline flex-1" /> : <span className="flex-1 text-[rgb(var(--muted-foreground))]" dangerouslySetInnerHTML={{__html: selectedQ[`option_${opt}_eng`] || '-'}} />}</div>
+                </div>
+              </div>
             ); })}
           </div>
           {editMode && <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3"><select value={editData.correct_answer} onChange={e => setEditData(p => ({ ...p, correct_answer: e.target.value }))} className="input h-8 text-xs">{['A', 'B', 'C', 'D'].map(v => <option key={v}>{v}</option>)}</select><input value={editData.correct_option_text} onChange={e => setEditData(p => ({ ...p, correct_option_text: e.target.value }))} className="input h-8 text-xs" placeholder="Correct text" /><input value={editData.question_id_html} onChange={e => setEditData(p => ({ ...p, question_id_html: e.target.value }))} className="input h-8 text-xs font-mono" placeholder="HTML ID" /></div>}
+          <div className="mt-4 border-t border-[rgb(var(--border))] pt-4">
+             <h4 className="text-[10px] font-semibold text-[rgb(var(--muted-foreground))] uppercase mb-3">Translations & Solutions</h4>
+             <div className="space-y-4">
+                <div>
+                   <span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase mb-1 block">Question (Hindi)</span>
+                   {editMode ? <textarea value={editData.question_text_hin} onChange={e => setEditData(p => ({...p, question_text_hin: e.target.value}))} className="textarea min-h-[60px] w-full" /> : <div className="text-xs text-slate-300 bg-[rgb(var(--accent))/0.3] p-2 rounded" dangerouslySetInnerHTML={{__html: selectedQ.question_text_hin || '-'}} />}
+                </div>
+                <div>
+                   <span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase mb-1 block">Question (English)</span>
+                   {editMode ? <textarea value={editData.question_text_eng} onChange={e => setEditData(p => ({...p, question_text_eng: e.target.value}))} className="textarea min-h-[60px] w-full" /> : <div className="text-xs text-slate-300 bg-[rgb(var(--accent))/0.3] p-2 rounded" dangerouslySetInnerHTML={{__html: selectedQ.question_text_eng || '-'}} />}
+                </div>
+                <div>
+                   <span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase mb-1 block">Solution (Hindi)</span>
+                   {editMode ? <textarea value={editData.solution_hin} onChange={e => setEditData(p => ({...p, solution_hin: e.target.value}))} className="textarea min-h-[60px] w-full" /> : <div className="text-xs text-slate-300 bg-[rgb(var(--accent))/0.3] p-2 rounded" dangerouslySetInnerHTML={{__html: selectedQ.solution_hin || '-'}} />}
+                </div>
+                <div>
+                   <span className="text-[10px] text-[rgb(var(--muted-foreground))] uppercase mb-1 block">Solution (English)</span>
+                   {editMode ? <textarea value={editData.solution_eng} onChange={e => setEditData(p => ({...p, solution_eng: e.target.value}))} className="textarea min-h-[60px] w-full" /> : <div className="text-xs text-slate-300 bg-[rgb(var(--accent))/0.3] p-2 rounded" dangerouslySetInnerHTML={{__html: selectedQ.solution_eng || '-'}} />}
+                </div>
+             </div>
+          </div>
         </div>
         {aiSuggestion && <div className="card p-4 mb-4 border-l-2 border-l-purple-500"><div className="flex justify-between items-center mb-2"><h3 className="text-sm font-semibold text-purple-300">AI Suggestion</h3><div className="flex gap-1"><button onClick={applyAiSuggestion} className="btn-ghost btn-sm text-purple-400">Apply</button><button onClick={() => setAiSuggestion(null)} className="btn-ghost btn-sm">Close</button></div></div>{aiSuggestion.notes && <p className="text-xs text-purple-200 mb-2 italic">{aiSuggestion.notes}</p>}<p className="text-xs mb-2"><span className="text-[rgb(var(--muted-foreground))]">Q:</span> {aiSuggestion.question_text}</p><div className="grid grid-cols-2 gap-1 text-xs">{[...'abcd'].map(o => <div key={o} className="rounded bg-[rgb(var(--accent))/0.3] p-1.5"><span className="text-purple-400 font-bold">{o.toUpperCase()}.</span> {aiSuggestion[`option_${o}`] || '—'}</div>)}</div><p className="text-xs text-emerald-400 mt-1">Answer: <strong>{aiSuggestion.correct_answer}</strong></p></div>}
         {selectedQ.shifts?.length > 0 && <div className="card p-4 mb-4"><h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase mb-2">Shifts ({selectedQ.shifts.length})</h3><div className="flex flex-wrap gap-1.5">{selectedQ.shifts.map((s, i) => <div key={i} className="rounded-lg bg-[rgb(var(--accent))/0.3] px-2.5 py-1.5 text-xs"><p className="text-indigo-300 font-medium">{s.test_date} \u00B7 {s.test_time}</p><p className="text-[rgb(var(--muted-foreground))]">{s.subject}</p></div>)}</div></div>}
         {selectedQ.solution && <div className="card p-4 mb-4"><h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase mb-2">AI Solution</h3><p className="text-sm mb-2">{selectedQ.solution.explanation}</p>{selectedQ.solution.why_wrong && <p className="text-xs text-red-300 mb-1"><span className="font-medium">Why Wrong:</span> {selectedQ.solution.why_wrong}</p>}{selectedQ.solution.key_takeaways?.length > 0 && <ul className="space-y-0.5">{selectedQ.solution.key_takeaways.map((t, i) => <li key={i} className="text-xs text-emerald-300">\u2022 {t}</li>)}</ul>}</div>}
-        {selectedQ.responses?.length > 0 && <div className="card overflow-x-auto"><div className="p-3 border-b border-[rgb(var(--border))]"><h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase">Responses ({selectedQ.responses.length})</h3></div><table className="w-full text-xs"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="p-2 text-left">Roll</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Q No</th><th className="p-2 text-left">Answer</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Marks</th></tr></thead><tbody>{selectedQ.responses.map(r => (
-          <tr key={r.response_id} className="border-b border-[rgb(var(--border))]"><td className="p-2 font-mono">{r.roll_number || '—'}</td><td className="p-2">{r.candidate_name || '—'}</td><td className="p-2">{r.question_no}</td><td className="p-2"><span className={r.student_answer === selectedQ.correct_answer ? 'text-emerald-400' : r.student_answer ? 'text-red-400' : 'text-[rgb(var(--muted-foreground))]'}>{r.student_answer || '—'}</span></td><td className="p-2"><span className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium', r.status === 'correct' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'wrong' ? 'bg-red-500/15 text-red-400' : 'bg-[rgb(var(--muted))/0.3] text-[rgb(var(--muted-foreground))]')}>{r.status}</span></td><td className="p-2">{r.marks_awarded}</td></tr>
-        ))}</tbody></table></div>}
+        {selectedQ.responses?.length > 0 && (() => { const uniqueResponses = Array.from(new Map(selectedQ.responses.map(r => [r.roll_number, r])).values()); return <div className="card overflow-x-auto"><div className="p-3 border-b border-[rgb(var(--border))]"><h3 className="text-xs font-semibold text-[rgb(var(--muted-foreground))] uppercase">Responses ({uniqueResponses.length})</h3></div><table className="w-full text-xs"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="p-2 text-left">Roll</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Q No</th><th className="p-2 text-left">Answer</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Marks</th></tr></thead><tbody>{uniqueResponses.map(r => (
+          <tr key={r.response_id || Math.random()} className="border-b border-[rgb(var(--border))]"><td className="p-2 font-mono">{r.roll_number || '-'}</td><td className="p-2">{r.candidate_name || '-'}</td><td className="p-2">{r.question_no}</td><td className="p-2"><span className={r.student_answer === selectedQ.correct_answer ? 'text-emerald-400' : r.student_answer ? 'text-red-400' : 'text-[rgb(var(--muted-foreground))]'}>{r.student_answer || '-'}</span></td><td className="p-2"><span className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium', r.status === 'correct' ? 'bg-emerald-500/15 text-emerald-400' : r.status === 'wrong' ? 'bg-red-500/15 text-red-400' : 'bg-[rgb(var(--muted))/0.3] text-[rgb(var(--muted-foreground))]')}>{r.status}</span></td><td className="p-2">{r.marks_awarded}</td></tr>
+        ))}</tbody></table></div>; })()}
       </div>
     );
   }
@@ -1599,7 +1653,7 @@ function ParsedData() {
           </div>
         </motion.div>
       ) : (
-        <div className="card overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header">Roll</th><th className="table-header">Candidate</th><th className="table-header">Subject</th><th className="table-header">Photo</th><th className="table-header">Parser</th><th className="table-header">Action</th></tr></thead><tbody>{loading ? <tr><td colSpan="6" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : results.map(r => (
+        <div className="card overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-[rgb(var(--border))]"><th className="table-header">Roll</th><th className="table-header">Candidate</th><th className="table-header">Subject</th><th className="table-header">Photo</th><th className="table-header">Parser</th><th className="table-header">Action</th></tr></thead><tbody>{loading ? <tr><td colSpan="6" className="p-8 text-center text-sm text-[rgb(var(--muted-foreground))]">Loading...</td></tr> : uniqueResults.map(r => (
           <tr key={r.id} className="border-b border-[rgb(var(--border))] hover:bg-[rgb(var(--accent))/0.3] transition-colors"><td className="table-cell font-mono text-xs">{r.roll_number}</td><td className="table-cell">{r.candidate_name || '—'}</td><td className="table-cell">{r.subject || '—'}</td><td className="table-cell">{r.application_photograph ? '\u2705' : '—'}</td><td className="table-cell text-xs text-[rgb(var(--muted-foreground))]">{r.parser_version || '—'}</td><td className="table-cell"><button onClick={() => openDetail(r.id)} className="btn-ghost btn-sm">View</button></td></tr>
         ))}</tbody></table></div>
       )}

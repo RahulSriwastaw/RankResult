@@ -29,6 +29,11 @@ def init_db(app):
 
         db.create_all()
         if db.engine.dialect.name == 'sqlite':
+            _ensure_columns('master_questions', {
+                'correct_count': 'correct_count INTEGER DEFAULT 0',
+                'wrong_count': 'wrong_count INTEGER DEFAULT 0',
+                'unattempted_count': 'unattempted_count INTEGER DEFAULT 0'
+            })
             _ensure_columns('exams', {
                 'price': 'price INTEGER DEFAULT 0',
                 'description': 'description TEXT',

@@ -63,6 +63,7 @@ def generate_solution(question_no, correct_answer, student_answer, question_text
     Returns a dict with explanation, why_wrong, key_takeaways, similar_questions_url,
     and metadata (subject, chapter, question_type, difficulty, question_text_hin,
     question_text_eng, option_a_hin, option_a_eng, ..., solution_hin, solution_eng).
+    Automatically retries with fallback models if rate-limited.
     """
     options_str = ""
     if option_a: options_str += f"\nOption A: {option_a}"
@@ -78,30 +79,42 @@ Question: {question_text or 'N/A'}{options_str}
 Correct Answer: {correct_answer} — {correct_option_text or ''}
 Student's Answer: {student_answer or 'Did not attempt'} — {student_option_text or ''}
 
-Your task is to:
-1. Provide a detailed explanation of the correct answer.
-2. Explain why the student's answer is wrong (if attempted).
-3. Give 3-4 key takeaways.
-4. Identify the subject (e.g. Mathematics, English, General Awareness, Reasoning, etc.)
-5. Identify the chapter/topic (e.g. Percentage, One Word Substitution, Polity, etc.)
-6. Identify the question type (e.g. MCQ, Fill in the Blank, Error Detection, etc.)
-7. Rate difficulty: Easy / Medium / Hard.
-8. Translate the question text into Hindi (question_text_hin).
-9. Provide a clean English version of the question text (question_text_eng).
-10. Translate each option into Hindi (option_a_hin, option_b_hin, etc.) and provide clean English (option_a_eng, etc.).
-11. Provide the full solution/explanation in Hindi (solution_hin).
-12. Provide the full solution/explanation in English (solution_eng).
+STEP 1 — Detect Language:
+First, detect the primary language of the question text above.
+- If the question is written mostly in Hindi (Devanagari script), set detected_language = "hi"
+- If the question is written mostly in English, set detected_language = "en"
+- If it is mixed (Hinglish), detect whichever is dominant.
+
+STEP 2 — Generate Solution:
+Write explanation, why_wrong, key_takeaways, solution_hin, and solution_eng based on the detected language:
+- If detected_language = "hi": write explanation, why_wrong, key_takeaways entirely in HINDI.
+- If detected_language = "en": write explanation, why_wrong, key_takeaways entirely in ENGLISH.
+Both solution_hin and solution_eng must always be filled (one is a translation of the other).
+
+CRITICAL FORMATTING RULES:
+- The "explanation", "solution_hin", and "solution_eng" MUST be formatted as structured, step-by-step explanations.
+- Each step must start on a NEW line with bold headers like "**Step 1:**" or "**चरण 1:**" and must be separated from other steps by double newlines (\n\n). Do NOT clump them into one paragraph.
+- For Mathematics, Reasoning, and Quantitative questions, show the formula on its own line, list the variables clearly, show calculation steps separately, and clearly highlight the final answer.
+- Keep the tone professional, educational, and easy for students to follow.
+
+Also:
+1. Identify the subject (e.g. Mathematics, English, General Awareness, Reasoning, etc.)
+2. Identify the chapter/topic (e.g. Percentage, One Word Substitution, Polity, etc.)
+3. Identify the question type (e.g. MCQ, Fill in the Blank, Error Detection, etc.)
+4. Provide clean Hindi version of the question (question_text_hin).
+5. Provide clean English version of the question (question_text_eng).
+6. Translate each option into Hindi and English.
 
 Return ONLY a valid JSON object with these exact keys:
 {{
-  "explanation": "...",
-  "why_wrong": "...",
+  "detected_language": "hi",
+  "explanation": "...(in detected language)...",
+  "why_wrong": "...(in detected language)...",
   "key_takeaways": ["...", "...", "..."],
   "similar_questions_url": null,
   "subject": "...",
   "chapter": "...",
   "question_type": "MCQ",
-  "difficulty": "Medium",
   "question_text_hin": "...",
   "question_text_eng": "...",
   "option_a_hin": "...",
@@ -112,8 +125,8 @@ Return ONLY a valid JSON object with these exact keys:
   "option_c_eng": "...",
   "option_d_hin": "...",
   "option_d_eng": "...",
-  "solution_hin": "...",
-  "solution_eng": "..."
+  "solution_hin": "...(full solution in Hindi)...",
+  "solution_eng": "...(full solution in English)..."
 }}"""
 
     gemini_api_key = os.getenv('GEMINI_API_KEY')
@@ -126,10 +139,14 @@ Return ONLY a valid JSON object with these exact keys:
             student_option_text=student_option_text
         )
 
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')}:generateContent?key={gemini_api_key}"
-    )
+    # Model fallback chain — tries each model in order until one succeeds
+    MODELS = [
+        'gemini-flash-latest',
+        'gemini-3.1-flash-lite',
+        'gemini-flash-lite-latest',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+    ]
     headers = {'Content-Type': 'application/json'}
     data = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -140,58 +157,83 @@ Return ONLY a valid JSON object with these exact keys:
         }
     }
 
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=60)
-        response.raise_for_status()
-        payload = response.json()
-        content = payload['candidates'][0]['content']['parts'][0]['text']
-        parsed = _extract_json_payload(content)
-        if parsed:
-            fallback = _build_fallback_solution(
-                question_no, correct_answer, student_answer,
-                question_text=question_text,
-                correct_option_text=correct_option_text,
-                student_option_text=student_option_text
-            )
-            return {
-                'explanation': parsed.get('explanation') or fallback['explanation'],
-                'why_wrong': parsed.get('why_wrong') or fallback['why_wrong'],
-                'key_takeaways': parsed.get('key_takeaways') or fallback['key_takeaways'],
-                'similar_questions_url': parsed.get('similar_questions_url'),
-                # New metadata fields
-                'subject': parsed.get('subject'),
-                'chapter': parsed.get('chapter'),
-                'question_type': parsed.get('question_type'),
-                'difficulty': parsed.get('difficulty'),
-                'question_text_hin': parsed.get('question_text_hin'),
-                'question_text_eng': parsed.get('question_text_eng'),
-                'option_a_hin': parsed.get('option_a_hin'),
-                'option_a_eng': parsed.get('option_a_eng'),
-                'option_b_hin': parsed.get('option_b_hin'),
-                'option_b_eng': parsed.get('option_b_eng'),
-                'option_c_hin': parsed.get('option_c_hin'),
-                'option_c_eng': parsed.get('option_c_eng'),
-                'option_d_hin': parsed.get('option_d_hin'),
-                'option_d_eng': parsed.get('option_d_eng'),
-                'solution_hin': parsed.get('solution_hin'),
-                'solution_eng': parsed.get('solution_eng'),
-            }
-        return _build_fallback_solution(
-            question_no, correct_answer, student_answer,
-            question_text=question_text,
-            correct_option_text=correct_option_text,
-            student_option_text=student_option_text
+    last_error = None
+    for model in MODELS:
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent?key={gemini_api_key}"
         )
-    except Exception as e:
-        print('Gemini API error:', e)
-        if 'response' in locals() and hasattr(response, 'text'):
-            print('Response:', response.text)
-        return _build_fallback_solution(
-            question_no, correct_answer, student_answer,
-            question_text=question_text,
-            correct_option_text=correct_option_text,
-            student_option_text=student_option_text
-        )
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=60)
+            if response.status_code == 429:
+                print(f"[AI] Model {model} rate-limited (429), trying next model...")
+                retry_delay = 2
+                try:
+                    err_json = response.json()
+                    details = err_json.get('error', {}).get('details', [])
+                    for d in details:
+                        if d.get('@type') == 'type.googleapis.com/google.rpc.RetryInfo':
+                            delay_str = d.get('retryDelay', '2s')
+                            retry_delay = int(delay_str.replace('s', '').strip())
+                            break
+                except Exception:
+                    pass
+                time.sleep(min(retry_delay, 5))  # wait at most 5s per model
+                continue
+
+            response.raise_for_status()
+            payload = response.json()
+            content = payload['candidates'][0]['content']['parts'][0]['text']
+            parsed = _extract_json_payload(content)
+            if parsed:
+                fallback = _build_fallback_solution(
+                    question_no, correct_answer, student_answer,
+                    question_text=question_text,
+                    correct_option_text=correct_option_text,
+                    student_option_text=student_option_text
+                )
+                print(f"[AI] Solution generated successfully using model: {model}")
+                return {
+                    'detected_language': parsed.get('detected_language', 'en'),
+                    'explanation': parsed.get('explanation') or fallback['explanation'],
+                    'why_wrong': parsed.get('why_wrong') or fallback['why_wrong'],
+                    'key_takeaways': parsed.get('key_takeaways') or fallback['key_takeaways'],
+                    'similar_questions_url': parsed.get('similar_questions_url'),
+                    # New metadata fields
+                    'subject': parsed.get('subject'),
+                    'chapter': parsed.get('chapter'),
+                    'question_type': parsed.get('question_type'),
+                    'difficulty': None,
+                    'question_text_hin': parsed.get('question_text_hin'),
+                    'question_text_eng': parsed.get('question_text_eng'),
+                    'option_a_hin': parsed.get('option_a_hin'),
+                    'option_a_eng': parsed.get('option_a_eng'),
+                    'option_b_hin': parsed.get('option_b_hin'),
+                    'option_b_eng': parsed.get('option_b_eng'),
+                    'option_c_hin': parsed.get('option_c_hin'),
+                    'option_c_eng': parsed.get('option_c_eng'),
+                    'option_d_hin': parsed.get('option_d_hin'),
+                    'option_d_eng': parsed.get('option_d_eng'),
+                    'solution_hin': parsed.get('solution_hin'),
+                    'solution_eng': parsed.get('solution_eng'),
+                }
+            print(f"[AI] Model {model} returned unparseable JSON, trying next...")
+            continue
+
+        except Exception as e:
+            last_error = e
+            print(f'[AI] Model {model} error: {e}')
+            if 'response' in locals() and hasattr(response, 'text'):
+                print('Response:', response.text[:300])
+            continue
+
+    print(f'[AI] All models exhausted. Last error: {last_error}')
+    return _build_fallback_solution(
+        question_no, correct_answer, student_answer,
+        question_text=question_text,
+        correct_option_text=correct_option_text,
+        student_option_text=student_option_text
+    )
 
 
 

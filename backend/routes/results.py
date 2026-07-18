@@ -206,6 +206,19 @@ def get_result_from_url():
 
             if mq:
                 mq.reference_count += 1
+                if not mq.question_id_html and q_id_html:
+                    mq.question_id_html = q_id_html
+                if not mq.option_a_id and q.get('option_a_id'):
+                    mq.option_a_id = q.get('option_a_id')
+                if not mq.option_b_id and q.get('option_b_id'):
+                    mq.option_b_id = q.get('option_b_id')
+                if not mq.option_c_id and q.get('option_c_id'):
+                    mq.option_c_id = q.get('option_c_id')
+                if not mq.option_d_id and q.get('option_d_id'):
+                    mq.option_d_id = q.get('option_d_id')
+                if not mq.correct_option_text and q.get('correct_option_text'):
+                    mq.correct_option_text = q.get('correct_option_text')
+
                 shifts_list = mq.shifts or []
                 is_new_shift = True
                 for s in shifts_list:
@@ -252,6 +265,23 @@ def get_result_from_url():
                 marks_awarded=q.get('marks', 0) or 0,
                 status=q.get('status', 'unattempted')
             )
+
+            # Check if this roll_number already contributed to this MasterQuestion's stats
+            existing_response = QuestionResponse.query.join(ExamResult).filter(
+                QuestionResponse.master_question_id == mq.id,
+                ExamResult.roll_number == new_result.roll_number
+            ).first()
+
+            if not existing_response:
+                status = q.get('status', 'unattempted')
+                if status == 'correct':
+                    mq.correct_count = (mq.correct_count or 0) + 1
+                elif status == 'wrong':
+                    mq.wrong_count = (mq.wrong_count or 0) + 1
+                else:
+                    mq.unattempted_count = (mq.unattempted_count or 0) + 1
+                mq.update_difficulty()
+
             # Set correct_answer directly for DB NOT NULL compat
             try:
                 qr.correct_answer = (mq.correct_answer or correct or '0')[:10]

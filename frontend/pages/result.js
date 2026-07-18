@@ -11,7 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FaShareAlt, FaMoon, FaSun, FaCoins, FaChevronDown, FaChevronUp,
   FaDownload, FaShoppingBag, FaUser, FaCheckCircle, FaTimesCircle,
-  FaClock, FaTrophy, FaPercent, FaBullseye, FaThumbsUp, FaChevronLeft, FaChevronRight
+  FaClock, FaTrophy, FaPercent, FaBullseye, FaThumbsUp, FaChevronLeft, FaChevronRight,
+  FaRobot, FaCheckSquare, FaSquare, FaTimes, FaSpinner, FaExpand
 } from 'react-icons/fa';
 import { useTheme } from 'next-themes';
 import { Doughnut, Bar } from 'react-chartjs-2';
@@ -25,13 +26,38 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
+const renderFormattedText = (text) => {
+  if (!text) return '';
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  escaped = escaped.replace(/`(.*?)`/g, '<code class="bg-slate-100 px-1.5 py-0.5 rounded-md font-mono text-xs text-rose-600 font-semibold">$1</code>');
+  return escaped;
+};
+
+const QuestionItem = ({ q, resultId, onUnlock, authUser, balance, isSelected, onToggleSelect, externalSolution, testDate, testTime }) => {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(q.is_unlocked || false);
   const [solutions, setSolutions] = useState(q.solutions || []);
   const [solIndex, setSolIndex] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
+
+  // Inject bulk-generated solution from parent
+  useEffect(() => {
+    if (externalSolution) {
+      setSolutions(prev => {
+        const already = prev.some(s => s.id === externalSolution.id);
+        return already ? prev : [externalSolution, ...prev];
+      });
+      setIsUnlocked(true);
+      setExpanded(true);
+    }
+  }, [externalSolution]);
 
   const isCorrect = q.student_answer && q.student_answer === q.correct_answer;
   const isWrong = q.student_answer && q.student_answer !== q.correct_answer;
@@ -43,11 +69,6 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
     if (!authUser || !authUser.id) {
       toast.error('Please log in or create an account to view AI solutions!');
       router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
-      return;
-    }
-    if (balance < 5) {
-      toast.error('Insufficient points balance. Please buy points packs first.');
-      router.push('/marketplace');
       return;
     }
     setLoading(true);
@@ -68,11 +89,6 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
     if (!authUser || !authUser.id) {
       toast.error('Please log in or create an account to generate AI solutions!');
       router.push(`/login?redirect=${encodeURIComponent(router.asPath)}`);
-      return;
-    }
-    if (balance < 5) {
-      toast.error('Insufficient points balance. Please buy points packs first.');
-      router.push('/marketplace');
       return;
     }
     setLoading(true);
@@ -131,8 +147,17 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
 
   return (
     <div className={`border-l-4 ${borderMap[status]} rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 shadow-xs overflow-hidden transition`}>
-      <div className="flex items-center justify-between p-3.5 cursor-pointer select-none bg-slate-50/50 hover:bg-slate-100/50 transition" onClick={() => setExpanded(!expanded)}>
+      <div className="flex items-center justify-between p-3.5 cursor-pointer select-none bg-slate-50/50 hover:bg-slate-100/50 transition" onClick={(e) => { if (e.target.closest('[data-checkbox]')) return; setExpanded(!expanded); }}>
         <div className="flex items-center gap-3 min-w-0">
+          {/* Checkbox for bulk selection */}
+          {onToggleSelect && (
+            <button data-checkbox onClick={(e) => { e.stopPropagation(); onToggleSelect(q.id); }}
+              className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-400 bg-white'
+              }`}>
+              {isSelected && <span className="text-[10px] font-black">✓</span>}
+            </button>
+          )}
           <span className="text-xs font-bold text-slate-500 bg-slate-200/70 px-2 py-1 rounded-md w-9 text-center shrink-0">Q{q.question_no}</span>
           <span className={`text-sm font-semibold text-slate-800 ${expanded ? 'whitespace-normal break-words' : 'truncate'}`} dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></span>
         </div>
@@ -170,10 +195,40 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
                 })}
               </div>
 
-              <div className="pt-2.5 border-t border-slate-100 flex flex-wrap gap-4 text-xs font-medium text-slate-500">
-                 <p><span className="text-slate-400">Marks:</span> <span className="font-bold text-slate-700">{q.marks_awarded}</span></p>
-                 <p><span className="text-slate-400">Question ID:</span> <span className="font-mono text-slate-600">{q.question_id_html || 'N/A'}</span></p>
-                 <p><span className="text-slate-400">Chosen Option ID:</span> <span className="font-mono text-slate-600">{q.option_id || 'N/A'}</span></p>
+              <div className="pt-3 border-t border-slate-100 flex flex-wrap gap-2.5 items-center">
+                 <span className="text-xs text-slate-400 font-extrabold mr-1">Stats:</span>
+                 {(() => {
+                   const total = (q.correct_count || 0) + (q.wrong_count || 0) + (q.unattempted_count || 0);
+                   const corrPct = total > 0 ? ((q.correct_count || 0) / total * 100).toFixed(1) : '0.0';
+                   const wrgPct = total > 0 ? ((q.wrong_count || 0) / total * 100).toFixed(1) : '0.0';
+                   const skpPct = total > 0 ? ((q.unattempted_count || 0) / total * 100).toFixed(1) : '0.0';
+                   return (
+                     <>
+                       <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-bold text-[11px] shadow-2xs" title={`Correct: ${q.correct_count} students`}>
+                         {corrPct}% correct ({q.correct_count})
+                       </span>
+                       <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200/60 font-bold text-[11px] shadow-2xs" title={`Wrong: ${q.wrong_count} students`}>
+                         {wrgPct}% wrong ({q.wrong_count})
+                       </span>
+                       <span className="px-2.5 py-1 rounded-lg bg-slate-50 text-slate-600 border border-slate-200/60 font-bold text-[11px] shadow-2xs" title={`Skipped: ${q.unattempted_count} students`}>
+                         {skpPct}% skipped ({q.unattempted_count})
+                       </span>
+                     </>
+                   );
+                 })()}
+                 {testDate && (
+                   <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/60 font-bold text-[11px] shadow-2xs">
+                     {testDate}
+                   </span>
+                 )}
+                 {testTime && (
+                   <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60 font-bold text-[11px] shadow-2xs">
+                     {testTime}
+                   </span>
+                 )}
+                 <span className="ml-auto text-xs text-slate-400 font-medium">
+                   Marks: <strong className="text-slate-700">{q.marks_awarded}</strong>
+                 </span>
               </div>
               
               {/* AI Solution Section */}
@@ -206,17 +261,53 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
                         )}
                         
                         <div className="px-4 py-2 min-h-[60px]">
-                          {solutions[solIndex].is_temporary && (
-                            <div className="mb-2 inline-block bg-amber-500/20 text-amber-800 text-[10px] px-2.5 py-0.5 rounded-md border border-amber-300 uppercase font-extrabold tracking-wider">
-                              Temporary AI Preview
+                          <div className="mb-2.5 flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {solutions[solIndex].is_temporary && (
+                                <span className="inline-block bg-amber-500/20 text-amber-800 text-[10px] px-2.5 py-0.5 rounded-md border border-amber-300 uppercase font-extrabold tracking-wider">Temporary AI Preview</span>
+                              )}
+                              {solutions[solIndex].detected_language && (
+                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-md font-bold border ${solutions[solIndex].detected_language === 'hi' ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-blue-100 text-blue-700 border-blue-300'}`}>
+                                  {solutions[solIndex].detected_language === 'hi' ? '🇮🇳 Hindi Solution' : '🇬🇧 English Solution'}
+                                </span>
+                              )}
                             </div>
-                          )}
-                          <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed font-medium">{solutions[solIndex].explanation}</p>
-                          {solutions[solIndex].why_wrong && (
-                            <div className="mt-3 p-2.5 bg-amber-50 rounded-xl border border-amber-200/60 text-amber-900 text-xs font-medium">
-                              <span className="font-bold uppercase tracking-wide text-amber-700">Exam Insights:</span> {solutions[solIndex].why_wrong}
-                            </div>
-                          )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowPopup(true); }}
+                              className="inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-xl font-bold border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition shadow-xs"
+                            >
+                              <FaExpand className="text-[9px]" /> Fullscreen / Step-by-Step
+                            </button>
+                          </div>
+                          
+                          {/* Show language-matched solution: solution_hin for Hindi, solution_eng for English */}
+                          {(() => {
+                            const sol = solutions[solIndex];
+                            const lang = sol.detected_language || 'en';
+                            const primaryText = lang === 'hi' ? (sol.solution_hin || sol.explanation) : (sol.solution_eng || sol.explanation);
+                            const insightsLabel = lang === 'hi' ? 'परीक्षा अंतर्दृष्टि:' : 'Exam Insights:';
+                            return (
+                              <>
+                                <p className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: renderFormattedText(primaryText) }}></p>
+                                {sol.why_wrong && (
+                                  <div className="mt-3 p-2.5 bg-amber-50 rounded-xl border border-amber-200/60 text-amber-900 text-xs font-medium">
+                                    <span className="font-bold uppercase tracking-wide text-amber-700">{insightsLabel}</span> <span dangerouslySetInnerHTML={{ __html: renderFormattedText(sol.why_wrong) }}></span>
+                                  </div>
+                                )}
+                                {sol.key_takeaways?.length > 0 && (
+                                  <div className="mt-3 space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">{lang === 'hi' ? 'मुख्य बातें:' : 'Key Takeaways:'}</p>
+                                    {sol.key_takeaways.map((t, i) => (
+                                      <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
+                                        <span className="text-indigo-500 font-bold mt-0.5">•</span>
+                                        <span>{t}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="mt-4 pt-3 border-t border-indigo-100 flex justify-between items-center">
                              <div className="text-xs font-semibold text-slate-500">Author: <strong className="text-indigo-900">{solutions[solIndex].user_name || 'RankVeda AI Engine'}</strong></div>
                              <div className="flex gap-2 items-center">
@@ -228,7 +319,7 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
                                   <button onClick={() => handleLike(solutions[solIndex].id)} className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200 px-3.5 py-1.5 rounded-xl shadow-xs transition">
                                     <FaThumbsUp /> {solutions[solIndex].likes || 0}
                                   </button>
-                               )}
+                                )}
                              </div>
                           </div>
                         </div>
@@ -248,6 +339,141 @@ const QuestionItem = ({ q, resultId, onUnlock, authUser, balance }) => {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Popup Modal */}
+      <AnimatePresence>
+        {showPopup && solutions[solIndex] && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden text-left"
+            >
+              {/* Modal Header */}
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                  <span className="bg-indigo-600 text-white font-extrabold text-xs px-2.5 py-1 rounded-lg">Q{q.question_no}</span>
+                  <span className="font-extrabold text-slate-900 text-base">Step-by-Step AI Solution</span>
+                </div>
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-full transition"
+                >
+                  <FaTimes className="text-sm" />
+                </button>
+              </div>
+
+              {/* Modal Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-200">
+                {/* Question Text Box */}
+                <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4">
+                  <div className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">Question:</div>
+                  <div className="text-sm font-semibold text-slate-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: q.question_text || `Question ${q.question_no}` }}></div>
+                  
+                  {/* Option comparison */}
+                  <div className="mt-4 flex flex-wrap gap-4 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-600 bg-white border border-slate-200/60 px-3 py-1.5 rounded-xl shadow-2xs">
+                      <span>Correct Option:</span>
+                      <span className="bg-green-600 text-white px-2 py-0.5 rounded-md text-[10px] uppercase font-black">{q.correct_answer}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold text-slate-600 bg-white border border-slate-200/60 px-3 py-1.5 rounded-xl shadow-2xs">
+                      <span>Your Option:</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-black ${
+                        status === 'correct' ? 'bg-green-600 text-white' : status === 'wrong' ? 'bg-red-600 text-white' : 'bg-slate-600 text-white'
+                      }`}>
+                        {q.student_answer || 'Skipped'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Solution */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📖</span>
+                      <h4 className="font-extrabold text-slate-900 text-sm">Detailed Explanation</h4>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const sol = solutions[solIndex];
+                    const lang = sol.detected_language || 'en';
+                    const primaryText = lang === 'hi' ? (sol.solution_hin || sol.explanation) : (sol.solution_eng || sol.explanation);
+                    const insightsLabel = lang === 'hi' ? 'परीक्षा अंतर्दृष्टि (Exam Insights):' : 'Exam Insights:';
+                    
+                    return (
+                      <div className="space-y-5">
+                        {/* Step-by-step rendering with clean block formatting */}
+                        <div className="text-slate-700 text-sm whitespace-pre-wrap leading-relaxed font-medium space-y-4">
+                          {primaryText.split('\n\n').map((paragraph, index) => {
+                            const trimmed = paragraph.trim();
+                            if (!trimmed) return null;
+                            
+                            // Detect steps
+                            const isStep = trimmed.startsWith('Step') || trimmed.startsWith('चरण') || trimmed.startsWith('**Step') || trimmed.startsWith('**चरण') || /^\d+\./.test(trimmed);
+                            // Detect math equations / calculations
+                            const isFormula = trimmed.includes('=') || trimmed.includes('+') || trimmed.includes('-') || trimmed.includes('*') || trimmed.includes('/') || trimmed.includes('[(N/2');
+
+                            return (
+                              <div 
+                                key={index} 
+                                className={`transition-all duration-200 ${
+                                  isStep 
+                                    ? 'border-l-4 border-indigo-600 pl-4 bg-indigo-50/30 py-3 pr-3 rounded-r-xl shadow-2xs font-bold text-slate-900' 
+                                    : isFormula 
+                                      ? 'bg-slate-50/80 font-mono text-xs p-4 rounded-xl border border-slate-200/50 text-indigo-950 font-semibold shadow-2xs my-2'
+                                      : 'text-slate-600 leading-relaxed'
+                                }`}
+                                dangerouslySetInnerHTML={{ __html: renderFormattedText(paragraph) }}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {sol.why_wrong && (
+                          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/60 text-amber-900 text-xs font-semibold shadow-2xs">
+                            <span className="font-extrabold uppercase tracking-wide text-amber-700 block mb-1.5">{insightsLabel}</span>
+                            <p className="leading-relaxed text-amber-800" dangerouslySetInnerHTML={{ __html: renderFormattedText(sol.why_wrong) }}></p>
+                          </div>
+                        )}
+
+                        {sol.key_takeaways?.length > 0 && (
+                          <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/50 space-y-2.5 shadow-2xs">
+                            <p className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider">{lang === 'hi' ? 'मुख्य बातें (Key Takeaways):' : 'Key Takeaways:'}</p>
+                            <div className="space-y-2">
+                              {sol.key_takeaways.map((t, i) => (
+                                <div key={i} className="flex items-start gap-2.5 text-xs text-slate-700 leading-relaxed">
+                                  <span className="text-indigo-600 font-black mt-0.5">•</span>
+                                  <span>{t}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="text-xs text-slate-400 font-semibold">
+                  Generated by <span className="text-indigo-600 font-bold">{solutions[solIndex].user_name || 'RankVeda AI Engine'}</span>
+                </div>
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md"
+                >
+                  Close Solution
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
@@ -353,6 +579,10 @@ export default function ResultPage() {
   const [rank, setRank] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState('pdf');
+  // Bulk solution state
+  const [bulkSelected, setBulkSelected] = useState([]);
+  const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0, running: false });
+  const [bulkSolutions, setBulkSolutions] = useState({}); // { q_id: solution }
   const marksheetRef = useRef(null);
   const { theme, setTheme } = useTheme();
 
@@ -393,6 +623,53 @@ export default function ResultPage() {
     };
     fetchResult();
   }, [url, exam, authUser]);
+
+  // ── BULK SOLUTION GENERATOR ───────────────────────────────────────
+  const handleBulkGenerate = async (qIds) => {
+    if (!authUser?.id) {
+      toast.error('Please log in to generate solutions!');
+      return;
+    }
+    if (!qIds || qIds.length === 0) {
+      toast.error('No questions selected!');
+      return;
+    }
+    setBulkProgress({ done: 0, total: qIds.length, running: true });
+    toast(`⚙️ Generating solutions for ${qIds.length} questions...`, { duration: 3000 });
+
+    // Process in batches of 5 to avoid timeout
+    const BATCH = 5;
+    let done = 0;
+    for (let i = 0; i < qIds.length; i += BATCH) {
+      const batch = qIds.slice(i, i + BATCH);
+      try {
+        const res = await axios.post(`${API}/api/questions/${data.result.id}/bulk-generate`, {
+          user_id: authUser.id,
+          question_ids: batch
+        });
+        const batchResults = res.data.results || [];
+        batchResults.forEach(r => {
+          if (r.success && r.solution) {
+            setBulkSolutions(prev => ({ ...prev, [r.q_id]: r.solution }));
+          }
+        });
+        done += batch.length;
+        setBulkProgress(prev => ({ ...prev, done }));
+        if (res.data.newBalance !== undefined) setBalance(res.data.newBalance);
+      } catch (err) {
+        console.error('Bulk batch error:', err);
+        done += batch.length;
+        setBulkProgress(prev => ({ ...prev, done }));
+      }
+    }
+    setBulkProgress(prev => ({ ...prev, running: false }));
+    setBulkSelected([]);
+    toast.success(`✅ Solutions generated for ${qIds.length} questions!`);
+  };
+
+  const toggleBulkSelect = (qId) => {
+    setBulkSelected(prev => prev.includes(qId) ? prev.filter(x => x !== qId) : [...prev, qId]);
+  };
 
   const buildSections = (result, questions) => {
     const sw = result?.section_wise;
@@ -783,14 +1060,60 @@ export default function ResultPage() {
                     ].map(f => (
                       <button
                         key={f.key}
-                        onClick={() => setFilter(f.key)}
+                        onClick={() => { setFilter(f.key); setBulkSelected([]); }}
                         className={`px-3.5 py-1.5 rounded-xl text-xs transition font-bold ${filter === f.key ? f.active : f.inactive}`}
                       >
                         {f.label}
                       </button>
                     ))}
+                    {/* Generate All button for filtered view */}
+                    {filter !== 'all' && filteredQs.length > 0 && (
+                      <button
+                        onClick={() => handleBulkGenerate(filteredQs.map(q => q.id))}
+                        disabled={bulkProgress.running}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-60 flex items-center gap-1.5 transition shadow-sm"
+                      >
+                        {bulkProgress.running ? (
+                          <><span className="animate-spin">⚙️</span> Generating...</>
+                        ) : (
+                          <><FaRobot className="text-[10px]" /> Generate All ({filteredQs.length})</>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Bulk Progress Bar */}
+                {bulkProgress.running && (
+                  <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-purple-700">⚙️ Generating AI Solutions...</span>
+                      <span className="text-xs font-bold text-purple-900">{bulkProgress.done}/{bulkProgress.total}</span>
+                    </div>
+                    <div className="w-full bg-purple-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
+                        style={{ width: `${bulkProgress.total > 0 ? (bulkProgress.done / bulkProgress.total) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Select All / Deselect controls */}
+                {filteredQs.length > 0 && (
+                  <div className="flex items-center gap-3 mb-3">
+                    <button
+                      onClick={() => setBulkSelected(prev => prev.length === filteredQs.length ? [] : filteredQs.map(q => q.id))}
+                      className="text-xs text-indigo-600 font-bold hover:underline flex items-center gap-1"
+                    >
+                      {bulkSelected.length === filteredQs.length && filteredQs.length > 0 ? '☑ Deselect All' : '☐ Select All'}
+                    </button>
+                    {bulkSelected.length > 0 && (
+                      <span className="text-xs text-slate-500">{bulkSelected.length} selected</span>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-4 max-h-[650px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
                   {Array.from(new Set(filteredQs.map(q => q.parsed_payload?.section_name || 'Overall'))).map((sectionName) => {
                     const sectionQs = filteredQs.filter(q => (q.parsed_payload?.section_name || 'Overall') === sectionName);
@@ -801,7 +1124,18 @@ export default function ResultPage() {
                         <div className="space-y-2.5">
                           {sectionQs.map((q, idx) => (
                             <motion.div key={q.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.008 }}>
-                              <QuestionItem q={q} resultId={result.id} onUnlock={(nb) => setBalance(nb)} authUser={authUser} balance={balance} />
+                              <QuestionItem
+                                q={q}
+                                resultId={result.id}
+                                onUnlock={(nb) => setBalance(nb)}
+                                authUser={authUser}
+                                balance={balance}
+                                isSelected={bulkSelected.includes(q.id)}
+                                onToggleSelect={toggleBulkSelect}
+                                externalSolution={bulkSolutions[q.id] || null}
+                                testDate={result.test_date}
+                                testTime={result.test_time}
+                              />
                             </motion.div>
                           ))}
                         </div>
@@ -811,6 +1145,32 @@ export default function ResultPage() {
                   {filteredQs.length === 0 && <p className="text-center text-slate-400 font-bold py-12 text-sm">No questions match this filter selection.</p>}
                 </div>
               </div>
+
+              {/* Floating Bulk Action Bar */}
+              <AnimatePresence>
+                {bulkSelected.length > 0 && !bulkProgress.running && (
+                  <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-2xl shadow-2xl px-5 py-3 flex items-center gap-4 border border-slate-700"
+                  >
+                    <span className="text-sm font-bold text-slate-200">{bulkSelected.length} questions selected</span>
+                    <button
+                      onClick={() => handleBulkGenerate(bulkSelected)}
+                      className="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition"
+                    >
+                      <FaRobot /> Generate Solutions
+                    </button>
+                    <button
+                      onClick={() => setBulkSelected([])}
+                      className="text-slate-400 hover:text-white transition text-lg"
+                    >
+                      <FaTimes />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* ── POINTS & QUESTION BANK BANNER ──────────────────────────── */}
               <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 border border-indigo-800/80 rounded-2xl p-6 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

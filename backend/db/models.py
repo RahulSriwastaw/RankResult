@@ -103,16 +103,38 @@ class MasterQuestion(db.Model):
     # AI-generated solutions in multiple languages
     solution_hin = db.Column(db.Text)               # Hindi solution/explanation
     solution_eng = db.Column(db.Text)               # English solution/explanation
-    parsed_payload = db.Column(db.JSON, default=dict)
-    reference_count = db.Column(db.Integer, default=1)
-    shifts = db.Column(db.JSON, default=list)  # list of shifts: [{'exam_id': int, 'test_date': str, 'test_time': str, 'subject': str}]
-    shift_count = db.Column(db.Integer, default=1)
+    
+    # Statistics
+    correct_count = db.Column(db.Integer, default=0)
+    wrong_count = db.Column(db.Integer, default=0)
+    unattempted_count = db.Column(db.Integer, default=0)
+
+    # Context
+    reference_count = db.Column(db.Integer, default=0)  # How many exam results contain this question
+    shifts = db.Column(db.JSON, default=list)       # List of shifts dicts
+    shift_count = db.Column(db.Integer, default=0)
+    parsed_payload = db.Column(db.JSON)             # The raw JSON parsed for this question initially
+
     created_at = db.Column(db.DateTime, default=utcnow)
     updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
 
 
     def __repr__(self):
         return f'<MasterQuestion {self.question_id_html or self.id}>'
+
+    def update_difficulty(self):
+        total = (self.correct_count or 0) + (self.wrong_count or 0) + (self.unattempted_count or 0)
+        if total == 0:
+            self.difficulty = "Medium"
+            return
+        
+        correct_rate = (self.correct_count or 0) / total
+        if correct_rate >= 0.70:
+            self.difficulty = "Easy"
+        elif correct_rate >= 0.30:
+            self.difficulty = "Medium"
+        else:
+            self.difficulty = "Hard"
 
     @staticmethod
     def generate_hash(text_str, html_id=None):
@@ -271,6 +293,9 @@ class QuestionResponse(db.Model):
             'difficulty': mq.difficulty if mq else self.difficulty,
             'status': self.status,
             'is_unlocked': is_unlocked,
+            'correct_count': mq.correct_count if mq else 0,
+            'wrong_count': mq.wrong_count if mq else 0,
+            'unattempted_count': mq.unattempted_count if mq else 0,
             # All options with bilingual text
             'option_a': {'id': mq.option_a_id, 'text': mq.option_a_text, 'hin': mq.option_a_hin, 'eng': mq.option_a_eng} if mq else {},
             'option_b': {'id': mq.option_b_id, 'text': mq.option_b_text, 'hin': mq.option_b_hin, 'eng': mq.option_b_eng} if mq else {},
