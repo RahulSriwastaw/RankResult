@@ -1636,6 +1636,8 @@ function ParsedData() {
     catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
+  const uniqueResults = Array.from(new Map(results.map(r => [`${r.exam_id}-${r.roll_number}`, r])).values());
+
   const openDetail = async id => { try { const res = await fetch(`${API}/results/${id}`); const data = await res.json(); setSelected(data); } catch (e) { console.error(e); } };
 
   return (
