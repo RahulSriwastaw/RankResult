@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaExclamationTriangle, FaChartLine, FaFileAlt, FaLink, FaShieldAlt, FaGavel } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 const LAST_UPDATED = '15 July 2026';
 
 const sections = [
@@ -12,8 +12,8 @@ const sections = [
     icon: FaExclamationTriangle,
     title: 'General Disclaimer',
     content: [
-      'The information and services provided on RankVeda are for general informational purposes only. All score calculations, rank predictions, and percentile estimates are UNOFFICIAL and should NOT be treated as final or authoritative.',
-      'RankVeda Technologies makes no representations or warranties of any kind, express or implied, regarding the accuracy, reliability, or completeness of any score, rank, or percentile displayed on this platform.',
+      'The information and services provided on RankResult are for general informational purposes only. All score calculations, rank predictions, and percentile estimates are UNOFFICIAL and should NOT be treated as final or authoritative.',
+      'RankResult Technologies makes no representations or warranties of any kind, express or implied, regarding the accuracy, reliability, or completeness of any score, rank, or percentile displayed on this platform.',
       'The final answer keys, results, and merit lists are published exclusively by the respective recruitment boards, testing agencies, and government authorities. Users must refer to the official websites for authentic results.',
     ],
   },
@@ -21,7 +21,7 @@ const sections = [
     icon: FaChartLine,
     title: 'Score & Rank Disclaimer',
     content: [
-      'All scores calculated through RankVeda are based on:',
+      'All scores calculated through RankResult are based on:',
       '',
       'The candidate\'s responses as displayed on digialm.com or similar portals.',
       'The official or provisional answer keys published by the respective exam conducting bodies.',
@@ -41,7 +41,7 @@ const sections = [
     icon: FaLink,
     title: 'External Links Disclaimer',
     content: [
-      'RankVeda may contain links to third-party websites, including digialm.com, exam conducting body portals, and payment gateways. These links are provided for your convenience only.',
+      'RankResult may contain links to third-party websites, including digialm.com, exam conducting body portals, and payment gateways. These links are provided for your convenience only.',
       'We have no control over the content, privacy practices, or accuracy of information on external sites. We do not endorse, guarantee, or assume responsibility for any third-party website or its content.',
       'Your use of any third-party website is subject to their respective terms and privacy policies.',
     ],
@@ -50,7 +50,7 @@ const sections = [
     icon: FaFileAlt,
     title: 'Accuracy Disclaimer',
     content: [
-      'While we strive to ensure that all information on RankVeda is accurate and up-to-date, we make no guarantees regarding:',
+      'While we strive to ensure that all information on RankResult is accurate and up-to-date, we make no guarantees regarding:',
       '',
       'The completeness or timeliness of exam data, answer keys, or exam patterns.',
       'The availability or uninterrupted access to our platform.',
@@ -64,8 +64,8 @@ const sections = [
     icon: FaShieldAlt,
     title: 'No Professional Advice',
     content: [
-      'The content on RankVeda is not intended to be a substitute for professional advice, including legal, financial, or career counseling. You should consult with qualified professionals for advice specific to your situation.',
-      'RankVeda does not provide any guarantee of exam qualification, job placement, or career advancement.',
+      'The content on RankResult is not intended to be a substitute for professional advice, including legal, financial, or career counseling. You should consult with qualified professionals for advice specific to your situation.',
+      'RankResult does not provide any guarantee of exam qualification, job placement, or career advancement.',
     ],
   },
   {
@@ -91,13 +91,13 @@ export default function DisclaimerPage() {
   return (
     <>
       <Head>
-        <title>Disclaimer | RankVeda — Unofficial Score Estimates</title>
-        <meta name="description" content="RankVeda Disclaimer: All scores, ranks, and percentiles are unofficial estimates. Refer to official exam boards for final results." />
-        <meta name="keywords" content="RankVeda disclaimer, unofficial scores, rank estimate, exam disclaimer" />
+        <title>Disclaimer | RankResult — Unofficial Score Estimates</title>
+        <meta name="description" content="RankResult Disclaimer: All scores, ranks, and percentiles are unofficial estimates. Refer to official exam boards for final results." />
+        <meta name="keywords" content="RankResult disclaimer, unofficial scores, rank estimate, exam disclaimer" />
         <link rel="canonical" href={`${SITE_URL}/disclaimer`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Disclaimer | RankVeda" />
-        <meta property="og:description" content="Important disclaimer about the unofficial nature of score calculations and rank predictions on RankVeda." />
+        <meta property="og:title" content="Disclaimer | RankResult" />
+        <meta property="og:description" content="Important disclaimer about the unofficial nature of score calculations and rank predictions on RankResult." />
         <meta property="og:url" content={`${SITE_URL}/disclaimer`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -105,7 +105,7 @@ export default function DisclaimerPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>

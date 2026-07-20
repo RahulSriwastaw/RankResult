@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaEnvelope, FaMapMarkerAlt, FaClock, FaPhone, FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -13,7 +13,7 @@ export default function ContactPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const mailtoLink = `mailto:support@rankveda.in?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`)}`;
+    const mailtoLink = `mailto:support@rankresult.in?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`)}`;
     window.open(mailtoLink, '_blank');
     setSubmitted(true);
   };
@@ -30,13 +30,13 @@ export default function ContactPage() {
   return (
     <>
       <Head>
-        <title>Contact Us | RankVeda — Get in Touch</title>
-        <meta name="description" content="Contact RankVeda support team. Email us at support@rankveda.in for queries, feedback, or grievances." />
-        <meta name="keywords" content="RankVeda contact, support, email, grievance officer, help" />
+        <title>Contact Us | RankResult — Get in Touch</title>
+        <meta name="description" content="Contact RankResult support team. Email us at support@rankresult.in for queries, feedback, or grievances." />
+        <meta name="keywords" content="RankResult contact, support, email, grievance officer, help" />
         <link rel="canonical" href={`${SITE_URL}/contact`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Contact Us | RankVeda" />
-        <meta property="og:description" content="Get in touch with the RankVeda team for support, feedback, or any queries." />
+        <meta property="og:title" content="Contact Us | RankResult" />
+        <meta property="og:description" content="Get in touch with the RankResult team for support, feedback, or any queries." />
         <meta property="og:url" content={`${SITE_URL}/contact`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -44,7 +44,7 @@ export default function ContactPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>
@@ -65,7 +65,7 @@ export default function ContactPage() {
                 <FaEnvelope className="text-indigo-400 text-xl" />
               </div>
               <h3 className="font-bold text-gray-200 mb-1 text-sm">Email</h3>
-              <p className="text-xs text-gray-500">support@rankveda.in</p>
+              <p className="text-xs text-gray-500">support@rankresult.in</p>
               <p className="text-xs text-gray-600 mt-1">We reply within 24 hours</p>
             </motion.div>
 
@@ -83,7 +83,7 @@ export default function ContactPage() {
                 <FaMapMarkerAlt className="text-indigo-400 text-xl" />
               </div>
               <h3 className="font-bold text-gray-200 mb-1 text-sm">Grievance Officer</h3>
-              <p className="text-xs text-gray-500">grievance@rankveda.in</p>
+              <p className="text-xs text-gray-500">grievance@rankresult.in</p>
               <p className="text-xs text-gray-600 mt-1">As per IT Act, 2000</p>
             </motion.div>
           </div>

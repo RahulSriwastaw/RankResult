@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-db_path = os.path.join(os.path.dirname(__file__), '..', 'instance', 'rankveda.db')
+db_path = os.path.join(os.path.dirname(__file__), '..', 'instance', 'rankresult.db')
 print(f"Connecting to {db_path}")
 
 try:

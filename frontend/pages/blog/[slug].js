@@ -6,7 +6,7 @@ import { FaCalendar, FaUser, FaBookOpen, FaArrowRight, FaShareAlt, FaTelegram, F
 import Navbar from '../../components/Navbar';
 import Logo from '../../components/Logo';
 
-const SITE_URL = 'https://rankveda.in';
+const SITE_URL = 'https://rankresult.in';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function BlogPostPage({ post, related = [] }) {
@@ -82,12 +82,12 @@ export default function BlogPostPage({ post, related = [] }) {
     dateModified: post.updated_at || post.created_at,
     author: {
       '@type': 'Organization',
-      name: 'RankVeda Expert Team',
+      name: 'RankResult Expert Team',
       url: SITE_URL
     },
     publisher: {
       '@type': 'Organization',
-      name: 'RankVeda',
+      name: 'RankResult',
       logo: {
         '@type': 'ImageObject',
         url: `${SITE_URL}/favicon.png`
@@ -103,7 +103,7 @@ export default function BlogPostPage({ post, related = [] }) {
     <>
       <Head>
         {/* SEO Meta Tags */}
-        <title>{post.meta_title || `${post.title} — RankVeda`}</title>
+        <title>{post.meta_title || `${post.title} — RankResult`}</title>
         <meta name="description" content={post.meta_description || post.excerpt} />
         <meta name="keywords" content={post.meta_keywords || post.tags} />
         <link rel="canonical" href={CANONICAL} />
@@ -115,7 +115,7 @@ export default function BlogPostPage({ post, related = [] }) {
         <meta property="og:description" content={post.og_description || post.excerpt} />
         <meta property="og:url" content={CANONICAL} />
         {post.featured_image && <meta property="og:image" content={post.featured_image} />}
-        <meta property="og:site_name" content="RankVeda" />
+        <meta property="og:site_name" content="RankResult" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -165,7 +165,7 @@ export default function BlogPostPage({ post, related = [] }) {
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
-                  <FaUser /> By RankVeda Experts
+                  <FaUser /> By RankResult Experts
                 </span>
               </div>
 
@@ -316,7 +316,7 @@ export default function BlogPostPage({ post, related = [] }) {
             </div>
             
             <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: blog articles are for information/preparation reference purposes. Final dates/notifications only by official boards.
               </div>

@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaLightbulb, FaUsers, FaShieldAlt, FaRocket, FaHandshake, FaHeart } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 
 const values = [
   { icon: FaLightbulb, title: 'Innovation', desc: 'We leverage AI and modern technology to provide instant, accurate exam score analysis — a first-of-its-kind free platform for Indian government exam aspirants.' },
@@ -16,7 +16,7 @@ const values = [
 ];
 
 const team = [
-  { name: 'Rahul Sriwastaw', role: 'Founder & Developer', desc: 'Building RankVeda with a mission to help millions of government exam aspirants check their scores instantly and plan their next steps.' },
+  { name: 'Rahul Sriwastaw', role: 'Founder & Developer', desc: 'Building RankResult with a mission to help millions of government exam aspirants check their scores instantly and plan their next steps.' },
 ];
 
 export default function AboutPage() {
@@ -42,13 +42,13 @@ export default function AboutPage() {
   return (
     <>
       <Head>
-        <title>About Us | RankVeda — Mission, Vision & Team</title>
-        <meta name="description" content="Learn about RankVeda — India's free platform for government exam answer key calculation, rank prediction, and score card download. Our mission, values, and team." />
-        <meta name="keywords" content="RankVeda about, mission, team, exam score calculator, India, rank predictor" />
+        <title>About Us | RankResult — Mission, Vision & Team</title>
+        <meta name="description" content="Learn about RankResult — India's free platform for government exam answer key calculation, rank prediction, and score card download. Our mission, values, and team." />
+        <meta name="keywords" content="RankResult about, mission, team, exam score calculator, India, rank predictor" />
         <link rel="canonical" href={`${SITE_URL}/about`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="About Us | RankVeda" />
-        <meta property="og:description" content="RankVeda helps millions of government exam aspirants calculate scores, predict ranks, and download score cards — all for free." />
+        <meta property="og:title" content="About Us | RankResult" />
+        <meta property="og:description" content="RankResult helps millions of government exam aspirants calculate scores, predict ranks, and download score cards — all for free." />
         <meta property="og:url" content={`${SITE_URL}/about`} />
         <meta name="twitter:card" content="summary_large_image" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
@@ -58,7 +58,7 @@ export default function AboutPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>
@@ -66,7 +66,7 @@ export default function AboutPage() {
         {/* HERO */}
         <section className="max-w-4xl mx-auto px-4 py-12 md:py-16 text-center">
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-black text-white mb-3">
-            About RankVeda
+            About RankResult
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="text-gray-500 text-sm max-w-2xl mx-auto leading-relaxed">
             India's first free platform dedicated to helping government exam aspirants instantly calculate their exam scores, predict ranks, and download professional score cards — all from a single response sheet URL.
@@ -82,7 +82,7 @@ export default function AboutPage() {
             </p>
             <br />
             <p className="text-sm text-gray-400 leading-relaxed">
-              RankVeda was created to change that. Our mission is to provide every exam aspirant with <strong className="text-gray-300">instant, accurate, and free</strong> score analysis so they can assess their performance, plan their next steps, and reduce the stress of waiting.
+              RankResult was created to change that. Our mission is to provide every exam aspirant with <strong className="text-gray-300">instant, accurate, and free</strong> score analysis so they can assess their performance, plan their next steps, and reduce the stress of waiting.
             </p>
             <br />
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -92,9 +92,9 @@ export default function AboutPage() {
 
           {/* WHY */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="bg-gray-900/40 border border-gray-800 rounded-xl p-6 md:p-8 mb-8">
-            <h2 className="text-xl font-bold text-gray-200 mb-3">Why "RankVeda"?</h2>
+            <h2 className="text-xl font-bold text-gray-200 mb-3">Why "RankResult"?</h2>
             <p className="text-sm text-gray-400 leading-relaxed">
-              "Veda" means knowledge in Sanskrit. RankVeda = Knowledge of your Rank. We believe that every aspirant deserves the knowledge of where they stand — not in weeks, but in seconds.
+              "Veda" means knowledge in Sanskrit. RankResult = Knowledge of your Rank. We believe that every aspirant deserves the knowledge of where they stand — not in weeks, but in seconds.
             </p>
           </motion.div>
 

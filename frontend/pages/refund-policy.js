@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaMoneyBillWave, FaUndoAlt, FaCreditCard, FaExclamationTriangle, FaEnvelope, FaCheckCircle } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 const LAST_UPDATED = '15 July 2026';
 
 const sections = [
@@ -12,7 +12,7 @@ const sections = [
     icon: FaMoneyBillWave,
     title: 'Overview',
     content: [
-      'This Refund & Cancellation Policy governs all purchases made on RankVeda, including points packs, exam packs, and question bank access.',
+      'This Refund & Cancellation Policy governs all purchases made on RankResult, including points packs, exam packs, and question bank access.',
       'By making a purchase on our platform, you agree to the terms of this policy.',
       'Since we deal in digital goods and services (virtual points, access to digital content), our refund policy is limited as described below.',
     ],
@@ -50,7 +50,7 @@ const sections = [
     content: [
       'To request a refund:',
       '',
-      'Email us at support@rankveda.in with the subject "Refund Request — [Order ID]" within 7 days of purchase.',
+      'Email us at support@rankresult.in with the subject "Refund Request — [Order ID]" within 7 days of purchase.',
       'Include your registered email address, order ID, payment transaction ID, and detailed reason for the refund request.',
       'Our team will review your request and respond within 5-7 business days.',
       'If approved, refunds will be processed within 7-10 business days to the original payment method.',
@@ -68,7 +68,7 @@ const sections = [
     content: [
       'Since digital goods are delivered instantly upon successful payment, orders CANNOT be cancelled once the payment is confirmed.',
       'If you have not yet used the purchased points or accessed the content, we may, at our sole discretion, consider a cancellation request. However, this is not guaranteed.',
-      'To request cancellation, contact us immediately at support@rankveda.in with your order details.',
+      'To request cancellation, contact us immediately at support@rankresult.in with your order details.',
     ],
   },
   {
@@ -87,8 +87,8 @@ const sections = [
     content: [
       'For all refund and cancellation related queries:',
       '',
-      'Email: support@rankveda.in',
-      'Grievance Officer: grievance@rankveda.in',
+      'Email: support@rankresult.in',
+      'Grievance Officer: grievance@rankresult.in',
       'Response Time: Within 24 hours on business days',
     ],
   },
@@ -107,13 +107,13 @@ export default function RefundPolicyPage() {
   return (
     <>
       <Head>
-        <title>Refund & Cancellation Policy | RankVeda</title>
-        <meta name="description" content="RankVeda Refund and Cancellation Policy for points packs, exam packs, and question bank purchases." />
-        <meta name="keywords" content="RankVeda refund, cancellation policy, digital goods refund, points pack refund" />
+        <title>Refund & Cancellation Policy | RankResult</title>
+        <meta name="description" content="RankResult Refund and Cancellation Policy for points packs, exam packs, and question bank purchases." />
+        <meta name="keywords" content="RankResult refund, cancellation policy, digital goods refund, points pack refund" />
         <link rel="canonical" href={`${SITE_URL}/refund-policy`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Refund & Cancellation Policy | RankVeda" />
-        <meta property="og:description" content="Understand the refund and cancellation policy for digital purchases on RankVeda." />
+        <meta property="og:title" content="Refund & Cancellation Policy | RankResult" />
+        <meta property="og:description" content="Understand the refund and cancellation policy for digital purchases on RankResult." />
         <meta property="og:url" content={`${SITE_URL}/refund-policy`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -121,7 +121,7 @@ export default function RefundPolicyPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>

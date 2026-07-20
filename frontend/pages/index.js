@@ -14,14 +14,14 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Logo from '../components/Logo';
 
-const SITE_URL = 'https://rankveda.in';
+const SITE_URL = 'https://rankresult.in';
 
 const webPageSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'RankVeda — Government Exam Score Calculator',
-  alternateName: 'RankVeda Exam Marks Calculator',
-  description: 'RankVeda is India\'s free platform to check RRB NTPC, SSC, Bank exam answer keys, calculate marks with negative marking, predict rank and download professional score card.',
+  name: 'RankResult — Government Exam Score Calculator',
+  alternateName: 'RankResult Exam Marks Calculator',
+  description: 'RankResult is India\'s free platform to check RRB NTPC, SSC, Bank exam answer keys, calculate marks with negative marking, predict rank and download professional score card.',
   url: SITE_URL,
   inLanguage: 'en-IN',
   potentialAction: {
@@ -32,7 +32,7 @@ const webPageSchema = {
   },
   publisher: {
     '@type': 'Organization',
-    name: 'RankVeda',
+    name: 'RankResult',
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
   },
@@ -41,13 +41,13 @@ const webPageSchema = {
 const orgSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'RankVeda',
+  name: 'RankResult',
   url: SITE_URL,
   description: 'Free government exam answer key calculator and rank predictor for RRB NTPC, SSC, Bank PO and other competitive exams.',
   sameAs: [
-    'https://twitter.com/RankVedaIn',
-    'https://linkedin.com/company/rankveda',
-    'https://github.com/rankveda',
+    'https://twitter.com/RankResultIn',
+    'https://linkedin.com/company/rankresult',
+    'https://github.com/rankresult',
   ],
   contactPoint: {
     '@type': 'ContactPoint',
@@ -70,7 +70,7 @@ export default function Home({ exams = [] }) {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'Government Exam Answer Key Calculators',
-    description: 'List of all supported government exam answer key calculators on RankVeda',
+    description: 'List of all supported government exam answer key calculators on RankResult',
     itemListElement: exams.map((exam, index) => ({
       '@type': 'ListItem',
       position: index + 1,
@@ -120,12 +120,12 @@ export default function Home({ exams = [] }) {
   return (
     <>
       <Head>
-        <title>RankVeda — Government Exam Answer Key Calculator 2025 | RRB NTPC, SSC, Bank PO Score, Rank & Score Card</title>
-        <meta name="description" content="RankVeda — India's #1 free exam score calculator. Check RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP answer keys 2025. Calculate exact marks with negative marking, predict live rank & percentile, download professional score card. No login required." />
+        <title>RankResult — Government Exam Answer Key Calculator 2025 | RRB NTPC, SSC, Bank PO Score, Rank & Score Card</title>
+        <meta name="description" content="RankResult — India's #1 free exam score calculator. Check RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP answer keys 2025. Calculate exact marks with negative marking, predict live rank & percentile, download professional score card. No login required." />
         <meta name="keywords" content="RRB NTPC UG answer key 2025, SSC CGL answer key 2025, SSC CHSL answer key 2025, RRB ALP answer key 2025, Bank PO answer key 2025, exam score calculator, marks calculator with negative marking, rank predictor, government exam score card download, digialm answer key checker" />
         <link rel="canonical" href={SITE_URL} />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-        <meta name="author" content="RankVeda" />
+        <meta name="author" content="RankResult" />
         <meta name="language" content="en-IN" />
         <meta name="theme-color" content="#4f46e5" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -135,22 +135,22 @@ export default function Home({ exams = [] }) {
         <meta name="geo.placename" content="India" />
 
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="RankVeda — Government Exam Score Calculator 2025 | RRB NTPC, SSC, Bank" />
+        <meta property="og:title" content="RankResult — Government Exam Score Calculator 2025 | RRB NTPC, SSC, Bank" />
         <meta property="og:description" content="Free answer key calculator for RRB NTPC UG, SSC CGL, CHSL, Bank PO, RRB ALP. Calculate exact marks with negative marking, predict live rank & percentile, download score card." />
         <meta property="og:url" content={SITE_URL} />
-        <meta property="og:site_name" content="RankVeda" />
+        <meta property="og:site_name" content="RankResult" />
         <meta property="og:locale" content="en_IN" />
         <meta property="og:image" content={`${SITE_URL}/og-image.png`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="RankVeda - Government Exam Answer Key Calculator" />
+        <meta property="og:image:alt" content="RankResult - Government Exam Answer Key Calculator" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="RankVeda — Government Exam Answer Key & Rank Calculator 2025" />
+        <meta name="twitter:title" content="RankResult — Government Exam Answer Key & Rank Calculator 2025" />
         <meta name="twitter:description" content="Check RRB NTPC UG, SSC, Bank answer keys. Instant score, rank & score card. Free!" />
         <meta name="twitter:image" content={`${SITE_URL}/og-image.png`} />
-        <meta name="twitter:site" content="@RankVedaIn" />
-        <meta name="twitter:creator" content="@RankVedaIn" />
+        <meta name="twitter:site" content="@RankResultIn" />
+        <meta name="twitter:creator" content="@RankResultIn" />
 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
@@ -514,14 +514,14 @@ export default function Home({ exams = [] }) {
           </div>
         </section>
 
-        {/* ── Why RankVeda Section ───────────────────────────────────────── */}
+        {/* ── Why RankResult Section ───────────────────────────────────────── */}
         <section className="max-w-7xl mx-auto px-4 py-16">
 
           {/* Section Header */}
           <div className="text-center mb-12 select-none">
             <div className="flex items-center justify-center gap-3 text-indigo-600 mb-2">
               <span className="h-[1px] w-6 border-t border-dashed border-indigo-400" />
-              <span className="text-sm font-extrabold uppercase tracking-widest">Why RankVeda?</span>
+              <span className="text-sm font-extrabold uppercase tracking-widest">Why RankResult?</span>
               <span className="h-[1px] w-6 border-t border-dashed border-indigo-400" />
             </div>
             <p className="text-slate-500 text-xs md:text-sm font-medium mt-1">
@@ -569,7 +569,7 @@ export default function Home({ exams = [] }) {
                 <div>
                   <h3 className="text-lg font-black tracking-tight mb-2">RRB NTPC UG Answer Key 2025</h3>
                   <p className="text-xs text-indigo-200/80 leading-relaxed max-w-sm">
-                    Check the RRB NTPC Under Graduate (UG) answer key instantly on RankVeda. Get your exact marks (with negative marking), section-wise score (Mathematics 30, General Awareness 40, Reasoning 30), and live rank from your digialm.com response sheet URL.
+                    Check the RRB NTPC Under Graduate (UG) answer key instantly on RankResult. Get your exact marks (with negative marking), section-wise score (Mathematics 30, General Awareness 40, Reasoning 30), and live rank from your digialm.com response sheet URL.
                   </p>
                 </div>
               </div>
@@ -589,7 +589,7 @@ export default function Home({ exams = [] }) {
                 <div>
                   <h3 className="text-lg font-black tracking-tight mb-2">Score Card Download Kyun?</h3>
                   <p className="text-xs text-indigo-200/80 leading-relaxed max-w-sm">
-                    The professional score card from RankVeda includes your photo, registration number, roll number, section-wise breakdown, rank and percentile. You can download it as PNG or PDF and share it.
+                    The professional score card from RankResult includes your photo, registration number, roll number, section-wise breakdown, rank and percentile. You can download it as PNG or PDF and share it.
                   </p>
                 </div>
               </div>
@@ -692,7 +692,7 @@ export default function Home({ exams = [] }) {
 
             {/* Bottom Row */}
             <div className="border-t border-slate-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: Scores are unofficial. Final result by respective recruitment boards only.
               </div>

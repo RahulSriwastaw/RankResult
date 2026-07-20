@@ -6,7 +6,7 @@ import { FaSearch, FaBookOpen, FaCalendar, FaUser, FaArrowRight } from 'react-ic
 import Navbar from '../../components/Navbar';
 import Logo from '../../components/Logo';
 
-const SITE_URL = 'https://rankveda.in';
+const SITE_URL = 'https://rankresult.in';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function BlogIndex({ initialPosts = [] }) {
@@ -42,7 +42,7 @@ export default function BlogIndex({ initialPosts = [] }) {
   return (
     <>
       <Head>
-        <title>RankVeda Blog — Competitive Exams Preparation Updates &amp; Prep Tips</title>
+        <title>RankResult Blog — Competitive Exams Preparation Updates &amp; Prep Tips</title>
         <meta name="description" content="Stay updated with the latest exam notifications, preparation strategies, syllabus analysis, and expert tips for SSC CGL, RRB NTPC, Bank PO, and other government exams." />
         <link rel="canonical" href={`${SITE_URL}/blog`} />
       </Head>
@@ -58,7 +58,7 @@ export default function BlogIndex({ initialPosts = [] }) {
           
           <div className="text-center mb-10 relative">
             <span className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-extrabold px-3.5 py-1.5 rounded-full mb-3 uppercase tracking-wider">
-              📚 RankVeda Article Resource Hub
+              📚 RankResult Article Resource Hub
             </span>
             <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-950 tracking-tight leading-tight">
               Latest Articles &amp; <span className="text-indigo-600">Exam Insights</span>
@@ -235,7 +235,7 @@ export default function BlogIndex({ initialPosts = [] }) {
             </div>
             
             <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: blog articles are for information/preparation reference purposes. Final dates/notifications only by official boards.
               </div>

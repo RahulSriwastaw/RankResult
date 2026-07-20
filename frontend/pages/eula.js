@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaFileContract, FaDesktop, FaBan, FaShieldAlt, FaGavel, FaEnvelope } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 const LAST_UPDATED = '15 July 2026';
 
 const sections = [
@@ -12,8 +12,8 @@ const sections = [
     icon: FaFileContract,
     title: '1. Grant of License',
     content: [
-      'This End User License Agreement ("EULA") is a legal agreement between you ("User" or "Licensee") and RankVeda Technologies ("Licensor") for the use of the RankVeda web platform and its associated services.',
-      'Subject to your compliance with this EULA and the Terms of Service, RankVeda grants you a non-exclusive, non-transferable, revocable, limited license to access and use the Platform for personal, non-commercial purposes.',
+      'This End User License Agreement ("EULA") is a legal agreement between you ("User" or "Licensee") and RankResult Technologies ("Licensor") for the use of the RankResult web platform and its associated services.',
+      'Subject to your compliance with this EULA and the Terms of Service, RankResult grants you a non-exclusive, non-transferable, revocable, limited license to access and use the Platform for personal, non-commercial purposes.',
       'This license does not permit you to:',
       '',
       'Sell, rent, lease, sublicense, distribute, or otherwise transfer the Platform or any portion thereof.',
@@ -26,9 +26,9 @@ const sections = [
     icon: FaDesktop,
     title: '2. Ownership',
     content: [
-      'The Platform, including all content, features, functionality, code, design, graphics, databases, and underlying technology, is the exclusive property of RankVeda Technologies and its licensors.',
+      'The Platform, including all content, features, functionality, code, design, graphics, databases, and underlying technology, is the exclusive property of RankResult Technologies and its licensors.',
       'The Platform is protected by Indian and international copyright, trademark, patent, trade secret, and other intellectual property laws.',
-      'This EULA does not transfer any ownership rights to you. All rights not expressly granted are reserved by RankVeda Technologies.',
+      'This EULA does not transfer any ownership rights to you. All rights not expressly granted are reserved by RankResult Technologies.',
     ],
   },
   {
@@ -50,7 +50,7 @@ const sections = [
     icon: FaShieldAlt,
     title: '4. Updates & Modifications',
     content: [
-      'RankVeda may, at its sole discretion, release updates, patches, or modifications to the Platform. These may be automatically deployed without prior notice to you.',
+      'RankResult may, at its sole discretion, release updates, patches, or modifications to the Platform. These may be automatically deployed without prior notice to you.',
       'We reserve the right to modify, suspend, or discontinue any aspect of the Platform at any time, with or without notice.',
       'We are not liable to you or any third party for any modification, suspension, or discontinuation of the Platform.',
     ],
@@ -62,7 +62,7 @@ const sections = [
       'This EULA is effective from the date you first access the Platform and continues until terminated.',
       'The license granted under this EULA will automatically terminate if you fail to comply with any of its terms.',
       'Upon termination, you must cease all use of the Platform and destroy any copies of Platform materials in your possession.',
-      'RankVeda reserves the right to terminate or suspend your access to the Platform at any time, without notice, for any reason, including violation of this EULA or our Terms of Service.',
+      'RankResult reserves the right to terminate or suspend your access to the Platform at any time, without notice, for any reason, including violation of this EULA or our Terms of Service.',
       'Sections 2, 3, 5, 6, and 7 shall survive any termination of this EULA.',
     ],
   },
@@ -70,8 +70,8 @@ const sections = [
     icon: FaShieldAlt,
     title: '6. Disclaimer of Warranties',
     content: [
-      'THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTY OF ANY KIND. RANKVEDA TECHNOLOGIES EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.',
-      'RankVeda does not warrant that:',
+      'THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTY OF ANY KIND. RANKRESULT TECHNOLOGIES EXPRESSLY DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.',
+      'RankResult does not warrant that:',
       '',
       'The Platform will meet your specific requirements.',
       'The Platform will be uninterrupted, timely, secure, or error-free.',
@@ -83,7 +83,7 @@ const sections = [
     icon: FaGavel,
     title: '7. Limitation of Liability',
     content: [
-      'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL RANKVEDA TECHNOLOGIES, ITS DIRECTORS, OFFICERS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO:',
+      'TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL RANKRESULT TECHNOLOGIES, ITS DIRECTORS, OFFICERS, EMPLOYEES, OR AGENTS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO:',
       '',
       'Your use or inability to use the Platform.',
       'Any unauthorized access to or alteration of your data.',
@@ -105,7 +105,7 @@ const sections = [
     icon: FaFileContract,
     title: '9. Entire Agreement',
     content: [
-      'This EULA, together with our Terms of Service and Privacy Policy, constitutes the entire agreement between you and RankVeda Technologies regarding your use of the Platform and supersedes all prior agreements and understandings.',
+      'This EULA, together with our Terms of Service and Privacy Policy, constitutes the entire agreement between you and RankResult Technologies regarding your use of the Platform and supersedes all prior agreements and understandings.',
       'If any provision of this EULA is held to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.',
     ],
   },
@@ -115,8 +115,8 @@ const sections = [
     content: [
       'If you have any questions about this EULA, please contact us:',
       '',
-      'Email: support@rankveda.in',
-      'Website: rankveda.in',
+      'Email: support@rankresult.in',
+      'Website: rankresult.in',
     ],
   },
 ];
@@ -134,13 +134,13 @@ export default function EULAPage() {
   return (
     <>
       <Head>
-        <title>End User License Agreement (EULA) | RankVeda</title>
-        <meta name="description" content="RankVeda End User License Agreement governing the use of our web platform and services." />
-        <meta name="keywords" content="RankVeda EULA, end user license agreement, software license, terms of use" />
+        <title>End User License Agreement (EULA) | RankResult</title>
+        <meta name="description" content="RankResult End User License Agreement governing the use of our web platform and services." />
+        <meta name="keywords" content="RankResult EULA, end user license agreement, software license, terms of use" />
         <link rel="canonical" href={`${SITE_URL}/eula`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="End User License Agreement | RankVeda" />
-        <meta property="og:description" content="Legal agreement governing the use of RankVeda platform and services." />
+        <meta property="og:title" content="End User License Agreement | RankResult" />
+        <meta property="og:description" content="Legal agreement governing the use of RankResult platform and services." />
         <meta property="og:url" content={`${SITE_URL}/eula`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -148,7 +148,7 @@ export default function EULAPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>

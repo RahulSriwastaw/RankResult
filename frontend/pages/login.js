@@ -123,8 +123,8 @@ export default function LoginPage() {
   return (
     <>
       <Head>
-        <title>{`${mode === 'login' ? 'Login' : 'Register'} — RankVeda`}</title>
-        <meta name="description" content="Login to RankVeda to view your exam result, rank and AI solution." />
+        <title>{`${mode === 'login' ? 'Login' : 'Register'} — RankResult`}</title>
+        <meta name="description" content="Login to RankResult to view your exam result, rank and AI solution." />
       </Head>
 
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden font-sans text-slate-800">
@@ -144,7 +144,7 @@ export default function LoginPage() {
             <div>
               <Link href="/" className="inline-flex items-center gap-2 mb-10">
                 <span className="text-3xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
-                  RankVeda
+                  RankResult
                 </span>
               </Link>
               <h2 className="text-3xl font-black text-indigo-950 leading-tight mb-4 tracking-tight">
@@ -187,7 +187,7 @@ export default function LoginPage() {
             <div className="md:hidden text-center mb-8">
               <Link href="/" className="inline-flex items-center gap-2">
                 <span className="text-3xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
-                  RankVeda
+                  RankResult
                 </span>
               </Link>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Exam Intelligence</p>

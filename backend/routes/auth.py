@@ -9,7 +9,7 @@ import traceback
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-JWT_SECRET = os.getenv('JWT_SECRET', 'rankveda-super-secret-jwt-key-2024')
+JWT_SECRET = os.getenv('JWT_SECRET', 'rankresult-super-secret-jwt-key-2024')
 JWT_EXPIRY_DAYS = 30
 
 

@@ -319,7 +319,7 @@ export default function PackAnalysis() {
   return (
     <>
       <Head>
-        <title>Marks Analysis Portal | RankVeda B2B</title>
+        <title>Marks Analysis Portal | RankResult B2B</title>
       </Head>
 
       {/* Styles for print styling report */}
@@ -366,7 +366,7 @@ export default function PackAnalysis() {
                 <FaArrowLeft />
               </Link>
               <span className="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                RankVeda
+                RankResult
               </span>
             </div>
             <div className="flex items-center gap-2">

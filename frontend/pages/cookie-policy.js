@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaCookieBite, FaCog, FaChartBar, FaCheckCircle, FaQuestionCircle, FaEnvelope } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 const LAST_UPDATED = '15 July 2026';
 
 const cookieTypes = [
@@ -46,7 +46,7 @@ const manageContent = [
   'Block cookies from specific websites.',
   'Set your browser to notify you when a cookie is set.',
   '',
-  'Please note that disabling essential cookies may prevent RankVeda from functioning properly.',
+  'Please note that disabling essential cookies may prevent RankResult from functioning properly.',
   '',
   'To manage cookies in your browser:',
   'Chrome: Settings → Privacy and Security → Cookies and other site data',
@@ -68,13 +68,13 @@ export default function CookiePolicyPage() {
   return (
     <>
       <Head>
-        <title>Cookie Policy | RankVeda — How We Use Cookies</title>
-        <meta name="description" content="RankVeda Cookie Policy explains how and why we use cookies, and how you can manage them." />
-        <meta name="keywords" content="RankVeda cookie policy, cookies, tracking, Google Analytics, cookie preferences" />
+        <title>Cookie Policy | RankResult — How We Use Cookies</title>
+        <meta name="description" content="RankResult Cookie Policy explains how and why we use cookies, and how you can manage them." />
+        <meta name="keywords" content="RankResult cookie policy, cookies, tracking, Google Analytics, cookie preferences" />
         <link rel="canonical" href={`${SITE_URL}/cookie-policy`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Cookie Policy | RankVeda" />
-        <meta property="og:description" content="Learn how RankVeda uses cookies and how you can control your cookie preferences." />
+        <meta property="og:title" content="Cookie Policy | RankResult" />
+        <meta property="og:description" content="Learn how RankResult uses cookies and how you can control your cookie preferences." />
         <meta property="og:url" content={`${SITE_URL}/cookie-policy`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -82,7 +82,7 @@ export default function CookiePolicyPage() {
       <div className="min-h-screen bg-[#0a0a0f] text-gray-300">
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>
@@ -169,7 +169,7 @@ export default function CookiePolicyPage() {
                   <p>We may update this Cookie Policy from time to time. Changes will be posted on this page with an updated "Last Updated" date.</p>
                   <br />
                   <p>If you have any questions about our use of cookies, please contact us:</p>
-                  <p>Email: support@rankveda.in</p>
+                  <p>Email: support@rankresult.in</p>
                 </div>
               </div>
             </div>

@@ -5,7 +5,7 @@ import { FaArrowRight, FaLock, FaBookOpen } from 'react-icons/fa';
 import Navbar from '../../components/Navbar';
 import Logo from '../../components/Logo';
 
-const SITE_URL = 'https://rankveda.in';
+const SITE_URL = 'https://rankresult.in';
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -23,7 +23,7 @@ export default function ExamsIndexPage({ exams = [] }) {
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'All Government Exam Answer Key Calculators — RankVeda',
+    name: 'All Government Exam Answer Key Calculators — RankResult',
     itemListElement: exams.map((e, i) => ({
       '@type': 'ListItem',
       position: i + 1,
@@ -35,7 +35,7 @@ export default function ExamsIndexPage({ exams = [] }) {
   return (
     <>
       <Head>
-        <title>All Exam Answer Key Calculators 2025 | RRB NTPC, SSC CGL, CHSL, Bank PO | RankVeda</title>
+        <title>All Exam Answer Key Calculators 2025 | RRB NTPC, SSC CGL, CHSL, Bank PO | RankResult</title>
         <meta
           name="description"
           content="Check answer keys, calculate exact scores and predict rank for RRB NTPC UG, NTPC CBT-II, SSC CGL, SSC CHSL, RRB ALP, IBPS PO and SSC MTS 2025. Free tool with section-wise analysis and score card download."
@@ -46,18 +46,18 @@ export default function ExamsIndexPage({ exams = [] }) {
         />
         <link rel="canonical" href={`${SITE_URL}/exams`} />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
-        <meta name="author" content="RankVeda" />
+        <meta name="author" content="RankResult" />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="All Exam Answer Key Calculators 2025 | RankVeda" />
+        <meta property="og:title" content="All Exam Answer Key Calculators 2025 | RankResult" />
         <meta
           property="og:description"
           content="Free answer key calculators for RRB NTPC, SSC CGL, SSC CHSL, RRB ALP, IBPS PO and SSC MTS. Check score, rank and download score card."
         />
         <meta property="og:url" content={`${SITE_URL}/exams`} />
-        <meta property="og:site_name" content="RankVeda" />
+        <meta property="og:site_name" content="RankResult" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="All Exam Answer Key Calculators 2025 | RankVeda" />
-        <meta name="twitter:site" content="@RankVedaIn" />
+        <meta name="twitter:title" content="All Exam Answer Key Calculators 2025 | RankResult" />
+        <meta name="twitter:site" content="@RankResultIn" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       </Head>
@@ -220,7 +220,7 @@ export default function ExamsIndexPage({ exams = [] }) {
             </div>
             
             <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: Scores are unofficial. Final result by respective recruitment boards only.
               </div>

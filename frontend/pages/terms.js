@@ -3,8 +3,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaGavel, FaUserCheck, FaCreditCard, FaBan, FaCopyright, FaExclamationTriangle, FaBalanceScale } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
 const LAST_UPDATED = '15 July 2026';
 
 const sections = [
@@ -12,8 +12,8 @@ const sections = [
     icon: FaGavel,
     title: '1. Acceptance of Terms',
     content: [
-      'By accessing or using RankVeda ("the Platform"), you agree to be bound by these Terms & Conditions. If you do not agree with any part of these terms, you must not use our services.',
-      'These terms constitute a binding legal agreement between you ("User") and RankVeda Technologies ("Company", "we", "us", "our").',
+      'By accessing or using RankResult ("the Platform"), you agree to be bound by these Terms & Conditions. If you do not agree with any part of these terms, you must not use our services.',
+      'These terms constitute a binding legal agreement between you ("User") and RankResult Technologies ("Company", "we", "us", "our").',
       'We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting. Your continued use of the Platform after changes constitutes acceptance of the modified terms.',
     ],
   },
@@ -32,7 +32,7 @@ const sections = [
     icon: FaBalanceScale,
     title: '3. Services Description',
     content: [
-      'RankVeda provides the following services:',
+      'RankResult provides the following services:',
       '',
       'Exam Answer Key Analysis: Users can paste digialm.com response sheet URLs to calculate scores with negative marking, section-wise analysis, rank prediction, and percentile calculation.',
       'Score Card Download: Users can download their score analysis as PNG or PDF.',
@@ -59,10 +59,10 @@ const sections = [
     icon: FaCopyright,
     title: '5. Intellectual Property Rights',
     content: [
-      'All content on RankVeda, including but not limited to text, graphics, logos, icons, software, databases, and code, is the property of RankVeda Technologies or its content suppliers and is protected by Indian Copyright Act, 1957 and international copyright laws.',
+      'All content on RankResult, including but not limited to text, graphics, logos, icons, software, databases, and code, is the property of RankResult Technologies or its content suppliers and is protected by Indian Copyright Act, 1957 and international copyright laws.',
       'Users retain ownership of the response sheet data they submit. By submitting data, you grant us a non-exclusive, royalty-free license to process and display it for the purpose of providing our services.',
-      'You may not reproduce, distribute, modify, create derivative works from, or exploit any content from RankVeda without prior written permission.',
-      'The name "RankVeda", its logo, and branding are trademarks of RankVeda Technologies.',
+      'You may not reproduce, distribute, modify, create derivative works from, or exploit any content from RankResult without prior written permission.',
+      'The name "RankResult", its logo, and branding are trademarks of RankResult Technologies.',
     ],
   },
   {
@@ -102,7 +102,7 @@ const sections = [
     icon: FaExclamationTriangle,
     title: '8. Limitation of Liability',
     content: [
-      'To the maximum extent permitted by applicable law, RankVeda Technologies, its directors, employees, partners, and affiliates shall NOT be liable for:',
+      'To the maximum extent permitted by applicable law, RankResult Technologies, its directors, employees, partners, and affiliates shall NOT be liable for:',
       '',
       'Any indirect, incidental, special, consequential, or punitive damages.',
       'Any loss of profits, data, use, goodwill, or other intangible losses.',
@@ -117,7 +117,7 @@ const sections = [
     icon: FaBalanceScale,
     title: '9. Indemnification',
     content: [
-      'You agree to indemnify, defend, and hold harmless RankVeda Technologies, its officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorney fees) arising from:',
+      'You agree to indemnify, defend, and hold harmless RankResult Technologies, its officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, costs, and expenses (including reasonable attorney fees) arising from:',
       '',
       'Your use of the Platform in violation of these Terms.',
       'Your violation of any applicable law or regulation.',
@@ -138,7 +138,7 @@ const sections = [
     icon: FaGavel,
     title: '11. Dispute Resolution',
     content: [
-      'Before initiating any legal proceedings, you agree to first attempt to resolve the dispute informally by contacting us at support@rankveda.in.',
+      'Before initiating any legal proceedings, you agree to first attempt to resolve the dispute informally by contacting us at support@rankresult.in.',
       'If the dispute cannot be resolved within 30 days, it shall be referred to arbitration in accordance with the Arbitration and Conciliation Act, 1996.',
       'The arbitration shall be conducted in New Delhi, India, by a sole arbitrator appointed by mutual agreement.',
       'The language of arbitration shall be English.',
@@ -163,7 +163,7 @@ const sections = [
     icon: FaGavel,
     title: '13. Entire Agreement',
     content: [
-      'These Terms constitute the entire agreement between you and RankVeda Technologies regarding your use of the Platform and supersede any prior agreements or understandings.',
+      'These Terms constitute the entire agreement between you and RankResult Technologies regarding your use of the Platform and supersede any prior agreements or understandings.',
       'If any provision of these Terms is found to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.',
       'Our failure to enforce any right or provision of these Terms shall not be deemed a waiver of such right or provision.',
     ],
@@ -174,9 +174,9 @@ const sections = [
     content: [
       'For any questions, concerns, or notices regarding these Terms, please contact us:',
       '',
-      'Email: support@rankveda.in',
-      'Grievance Officer: grievance@rankveda.in',
-      'Website: rankveda.in',
+      'Email: support@rankresult.in',
+      'Grievance Officer: grievance@rankresult.in',
+      'Website: rankresult.in',
     ],
   },
 ];
@@ -196,13 +196,13 @@ export default function TermsPage() {
   return (
     <>
       <Head>
-        <title>Terms & Conditions | RankVeda</title>
-        <meta name="description" content="RankVeda Terms & Conditions governing your use of our exam score calculator, rank predictor, and question bank platform." />
-        <meta name="keywords" content="RankVeda terms, terms of service, conditions of use, exam platform terms" />
+        <title>Terms & Conditions | RankResult</title>
+        <meta name="description" content="RankResult Terms & Conditions governing your use of our exam score calculator, rank predictor, and question bank platform." />
+        <meta name="keywords" content="RankResult terms, terms of service, conditions of use, exam platform terms" />
         <link rel="canonical" href={`${SITE_URL}/terms`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Terms & Conditions | RankVeda" />
-        <meta property="og:description" content="Terms and conditions governing the use of RankVeda exam analysis platform." />
+        <meta property="og:title" content="Terms & Conditions | RankResult" />
+        <meta property="og:description" content="Terms and conditions governing the use of RankResult exam analysis platform." />
         <meta property="og:url" content={`${SITE_URL}/terms`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -211,7 +211,7 @@ export default function TermsPage() {
         {/* NAV */}
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>

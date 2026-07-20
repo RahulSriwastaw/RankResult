@@ -145,7 +145,7 @@ def get_result_from_url():
                 application_photograph=parsed.get('application_photograph') or parsed.get('photo_url'),
                 candidate_payload=parsed.get('candidate_payload') or {},
                 source_html=parsed.get('source_html'),
-                parser_version=parsed.get('parser_version', 'rankveda-parser-v1.0'),
+                parser_version=parsed.get('parser_version', 'rankresult-parser-v1.0'),
                 parsed_at=parsed_at,
                 score=parsed.get('score', 0) or 0,
                 rank=parsed.get('rank', 0) or 0,
@@ -466,7 +466,7 @@ def download_result_pdf(result_id):
 
     response = make_response(pdf)
     response.headers['Content-Type'] = 'application/pdf'
-    filename = f"RankVeda_Scorecard_{res.roll_number or res.id}.pdf"
+    filename = f"RankResult_Scorecard_{res.roll_number or res.id}.pdf"
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
@@ -780,7 +780,7 @@ def upload_pdf_result():
                 test_date=parsed_data.get('test_date') or '',
                 test_time=parsed_data.get('test_time') or '',
                 subject=parsed_data.get('subject') or '',
-                parser_version='rankveda-pdf-parser-v1.0',
+                parser_version='rankresult-pdf-parser-v1.0',
                 parsed_at=datetime.utcnow(),
                 score=score,
                 total_correct=correct_count,

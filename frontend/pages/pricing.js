@@ -107,7 +107,7 @@ export default function Pricing() {
           key: orderData.key_id,
           amount: orderData.amount,
           currency: orderData.currency,
-          name: 'RankVeda',
+          name: 'RankResult',
           description: `Points Pack: ${buyModal.name}`,
           order_id: orderData.order_id,
           handler: async function (response) {
@@ -164,7 +164,7 @@ export default function Pricing() {
 
   const faqs = [
     {
-      q: "What are points used for in RankVeda?",
+      q: "What are points used for in RankResult?",
       a: "Points are virtual credits used to unlock detailed, step-by-step AI explanations, solution keys, difficulty ratings, chapter concepts, and bilingual translations for wrong questions in your test results."
     },
     {
@@ -188,9 +188,9 @@ export default function Pricing() {
   return (
     <>
       <Head>
-        <title>Pricing Plans &amp; Points Packages — RankVeda</title>
-        <meta name="description" content="Simple, transparent pricing. Buy RankVeda points packages to unlock step-by-step AI exam solutions and detailed rank calculations." />
-        <link rel="canonical" href="https://rankveda.in/pricing" />
+        <title>Pricing Plans &amp; Points Packages — RankResult</title>
+        <meta name="description" content="Simple, transparent pricing. Buy RankResult points packages to unlock step-by-step AI exam solutions and detailed rank calculations." />
+        <link rel="canonical" href="https://rankresult.in/pricing" />
       </Head>
 
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
@@ -386,7 +386,7 @@ export default function Pricing() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-slate-800 pb-8">
               <div>
-                <span className="text-white font-extrabold text-base tracking-wider uppercase">RankVeda</span>
+                <span className="text-white font-extrabold text-base tracking-wider uppercase">RankResult</span>
                 <p className="text-[10px] text-slate-500 mt-1">
                   Unofficial rank predictor and government exam resource bank.
                 </p>
@@ -400,7 +400,7 @@ export default function Pricing() {
             </div>
             
             <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: Points and packs purchases are subject to terms of service. AI solutions are for preparation reference only.
               </div>

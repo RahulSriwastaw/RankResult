@@ -206,7 +206,7 @@ export default function Marketplace() {
             key: orderData.key_id,
             amount: orderData.amount,
             currency: orderData.currency,
-            name: 'RankVeda',
+            name: 'RankResult',
             description: `Points Pack: ${buyModal.name}`,
             order_id: orderData.order_id,
             handler: async function (response) {
@@ -289,7 +289,7 @@ export default function Marketplace() {
     return (
       <>
         <Head>
-          <title>{selectedExam.name} — Shifts | RankVeda</title>
+          <title>{selectedExam.name} — Shifts | RankResult</title>
         </Head>
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
           <NavBar user={currentUser} />
@@ -359,7 +359,7 @@ export default function Marketplace() {
     return (
       <>
         <Head>
-          <title>{selectedExam.name} — Question Bank | RankVeda</title>
+          <title>{selectedExam.name} — Question Bank | RankResult</title>
         </Head>
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">
           <NavBar user={currentUser} />
@@ -507,7 +507,7 @@ export default function Marketplace() {
   return (
     <>
       <Head>
-        <title>Question Bank Marketplace — RankVeda</title>
+        <title>Question Bank Marketplace — RankResult</title>
         <meta name="description" content="Question Bank for all competitive exams. RRB NTPC, SSC, Banking — all shifts questions at one place." />
       </Head>
 

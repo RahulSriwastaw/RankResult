@@ -48,7 +48,7 @@ export default function AdminLayout() {
                 <FaShieldAlt className="text-xl text-white" />
               </div>
               <h1 className="text-lg font-semibold">Admin Panel</h1>
-              <p className="text-sm text-[rgb(var(--muted-foreground))]">RankVeda Administration</p>
+              <p className="text-sm text-[rgb(var(--muted-foreground))]">RankResult Administration</p>
             </div>
             <form onSubmit={e => { e.preventDefault(); if (password === 'admin123') { sessionStorage.setItem('admin_auth', 'true'); setAuthed(true); setError(''); } else setError('Incorrect password'); }} className="space-y-4">
               <div className="space-y-2">
@@ -86,7 +86,7 @@ export default function AdminLayout() {
       <header className="md:hidden flex items-center justify-between p-3 border-b border-[rgb(var(--border))] bg-[rgb(var(--card))] sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[rgb(var(--primary))] flex items-center justify-center"><FaShieldAlt className="text-sm text-white" /></div>
-          <span className="font-semibold text-sm">RankVeda</span>
+          <span className="font-semibold text-sm">RankResult</span>
         </div>
         <button onClick={() => setSidebar(!sidebar)} className="btn-ghost p-2">
           {sidebar ? <FaTimes size={18} /> : <FaBars size={18} />}
@@ -104,7 +104,7 @@ export default function AdminLayout() {
       )}>
         <div className="hidden md:flex items-center gap-2.5 p-4 border-b border-[rgb(var(--border))]">
           <div className="w-9 h-9 rounded-lg bg-[rgb(var(--primary))] flex items-center justify-center shadow-lg"><FaShieldAlt className="text-base text-white" /></div>
-          <div><h2 className="font-semibold text-sm">RankVeda</h2><p className="text-[10px] text-[rgb(var(--muted-foreground))]">Admin Panel</p></div>
+          <div><h2 className="font-semibold text-sm">RankResult</h2><p className="text-[10px] text-[rgb(var(--muted-foreground))]">Admin Panel</p></div>
         </div>
         <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto scrollbar-thin">
           {navItems.map((item, i) => (
@@ -2409,7 +2409,7 @@ function Blog() {
                     value={canonicalUrl}
                     onChange={e => setCanonicalUrl(e.target.value)}
                     className="input text-xs"
-                    placeholder="https://rankveda.in/blog/post-name"
+                    placeholder="https://rankresult.in/blog/post-name"
                   />
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 
 /**
- * MarksheetCard — Premium Dark Score Card matching RankVeda's dark glassmorphism theme.
+ * MarksheetCard — Premium Dark Score Card matching RankResult's dark glassmorphism theme.
  * All styles are inline (no Tailwind) for html2canvas compatibility.
  *
  * Props:
@@ -384,12 +384,12 @@ const MarksheetCard = forwardRef(function MarksheetCard({ candidate, score, rank
             </td>
             <td style={{ padding: '8px 12px', background: '#ffffff', textAlign: 'right', border: '1px solid #cbd5e1', width: '40%' }}>
               <div style={{ fontWeight: '800', color: '#0f172a' }}>Certificate ID: RV1710726</div>
-              <a href="https://RankVeda.in/verify" target="_blank" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>Verify on RankVeda.in</a>
+              <a href="https://RankResult.in/verify" target="_blank" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>Verify on RankResult.in</a>
             </td>
           </tr>
           <tr>
             <td colSpan={2} style={{ background: '#0f172a', padding: '6px 12px', color: 'rgba(255,255,255,0.7)', fontSize: '8px', textAlign: 'center' }}>
-              This certificate is system generated and does not require a physical signature. © RankVeda
+              This certificate is system generated and does not require a physical signature. © RankResult
             </td>
           </tr>
         </tbody>

@@ -41,7 +41,7 @@ export default function Logo({ className = "", size = "md", href = "/" }) {
         </svg>
         <div className={`absolute inset-0 flex items-center justify-center font-black ${badgeFont} tracking-tighter pt-0.5`}>
           <span className="bg-gradient-to-br from-white via-purple-200 to-indigo-300 text-transparent bg-clip-text drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] font-sans">
-            RV
+            RR
           </span>
         </div>
       </div>
@@ -49,7 +49,7 @@ export default function Logo({ className = "", size = "md", href = "/" }) {
       {/* Brand Text */}
       <div className={`flex items-center font-black tracking-tight ${textSize}`}>
         <span className="text-white">Rank</span>
-        <span className="text-[#FF9F1C]">Veda</span>
+        <span className="text-[#FF9F1C]">Result</span>
       </div>
     </div>
   );
@@ -57,7 +57,7 @@ export default function Logo({ className = "", size = "md", href = "/" }) {
   if (!href) return content;
 
   return (
-    <Link href={href} aria-label="RankVeda Home" className="inline-flex">
+    <Link href={href} aria-label="RankResult Home" className="inline-flex">
       {content}
     </Link>
   );

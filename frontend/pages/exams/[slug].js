@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 import Navbar from '../../components/Navbar';
 import Logo from '../../components/Logo';
 
-const SITE_URL = 'https://rankveda.in';
+const SITE_URL = 'https://rankresult.in';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // ─── Colour token map (themeColor → Tailwind classes for Light Theme) ────────
@@ -285,7 +285,7 @@ export default function ExamPage({ exam, allExams = [] }) {
     description: exam.seo.description,
     url: CANONICAL,
     inLanguage: 'en-IN',
-    author: { '@type': 'Organization', name: 'RankVeda', url: SITE_URL },
+    author: { '@type': 'Organization', name: 'RankResult', url: SITE_URL },
     breadcrumb: breadcrumbSchema,
   };
 
@@ -297,7 +297,7 @@ export default function ExamPage({ exam, allExams = [] }) {
         <meta name="keywords" content={exam.seo.keywords} />
         <link rel="canonical" href={CANONICAL} />
         <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-        <meta name="author" content="RankVeda" />
+        <meta name="author" content="RankResult" />
         <meta name="language" content="en-IN" />
 
         {/* Open Graph */}
@@ -305,14 +305,14 @@ export default function ExamPage({ exam, allExams = [] }) {
         <meta property="og:title" content={exam.seo.ogTitle} />
         <meta property="og:description" content={exam.seo.ogDesc} />
         <meta property="og:url" content={CANONICAL} />
-        <meta property="og:site_name" content="RankVeda" />
+        <meta property="og:site_name" content="RankResult" />
         <meta property="og:locale" content="en_IN" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={exam.seo.twitterTitle} />
         <meta name="twitter:description" content={exam.seo.twitterDesc} />
-        <meta name="twitter:site" content="@RankVedaIn" />
+        <meta name="twitter:site" content="@RankResultIn" />
 
         {/* JSON-LD */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
@@ -366,7 +366,7 @@ export default function ExamPage({ exam, allExams = [] }) {
                 <span className="text-emerald-600" suppressHydrationWarning>
                   {liveCount.toLocaleString()}+
                 </span>
-                <span className="text-slate-400 uppercase tracking-wide">candidates checked on RankVeda</span>
+                <span className="text-slate-400 uppercase tracking-wide">candidates checked on RankResult</span>
               </div>
 
               {/* Quick feature pills */}
@@ -549,12 +549,12 @@ export default function ExamPage({ exam, allExams = [] }) {
         {/* ── How it Works ───────────────────────────────────────────────── */}
         <section className="max-w-7xl mx-auto px-4 pb-10">
           <h2 className="text-xl font-extrabold mb-6 text-indigo-950">
-            How to Check {exam.name} Score on RankVeda
+            How to Check {exam.name} Score on RankResult
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { step: '01', title: 'Open Official Portal', desc: `Go to the official ${exam.conducted_by} website and find your response sheet link.`, icon: '🌐' },
-              { step: '02', title: 'Copy URL & Paste', desc: 'Copy the response sheet URL and paste it in the input box above on RankVeda.', icon: '📋' },
+              { step: '02', title: 'Copy URL & Paste', desc: 'Copy the response sheet URL and paste it in the input box above on RankResult.', icon: '📋' },
               { step: '03', title: 'Instant Analysis', desc: 'Get score with negative marking, section-wise breakdown, live rank and percentile instantly.', icon: '🚀' },
             ].map((item) => (
               <motion.div
@@ -682,14 +682,14 @@ export default function ExamPage({ exam, allExams = [] }) {
           </div>
         </section>
 
-        {/* ── Why RankVeda ───────────────────────────────────────────────── */}
+        {/* ── Why RankResult ───────────────────────────────────────────────── */}
         <section className="max-w-7xl mx-auto px-4 pb-10">
-          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">Why Use RankVeda for {exam.name}?</h2>
+          <h2 className="text-xl font-extrabold mb-6 text-indigo-950">Why Use RankResult for {exam.name}?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               { icon: '⚡', title: 'Instant Score Calculation', desc: 'Get your exact score in seconds — automatic negative marking calculation, no manual effort.' },
               { icon: '📊', title: 'Section-wise Analysis', desc: 'See your performance broken down by subject. Identify weak areas instantly.' },
-              { icon: '🏆', title: 'Live Rank & Percentile', desc: `Know where you stand among all ${exam.name} candidates on RankVeda in real-time.` },
+              { icon: '🏆', title: 'Live Rank & Percentile', desc: `Know where you stand among all ${exam.name} candidates on RankResult in real-time.` },
               { icon: '📥', title: 'Score Card Download', desc: 'Download your personalized score card in PNG or PDF — share with friends and family.' },
               { icon: '🤖', title: 'AI-Powered Explanations', desc: 'Understand wrong answers with Gemini AI — never miss learning from mistakes.' },
               { icon: '🔒', title: '100% Free & Secure', desc: 'No login required, no data sold. Your result URL stays private and secure.' },
@@ -759,7 +759,7 @@ export default function ExamPage({ exam, allExams = [] }) {
             </div>
             
             <div className="pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              <div>© 2025 RankVeda — All Rights Reserved</div>
+              <div>© 2025 RankResult — All Rights Reserved</div>
               <div className="text-center md:text-right normal-case tracking-normal">
                 Disclaimer: Scores are unofficial. Final result by respective recruitment boards only.
               </div>

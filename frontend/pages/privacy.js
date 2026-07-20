@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FaShieldAlt, FaLock, FaUserSecret, FaCookie, FaEnvelope, FaDatabase } from 'react-icons/fa';
 
-const SITE_URL = 'https://rankveda.in';
-const SITE_NAME = 'RankVeda';
-const CONTACT_EMAIL = 'support@rankveda.in';
+const SITE_URL = 'https://rankresult.in';
+const SITE_NAME = 'RankResult';
+const CONTACT_EMAIL = 'support@rankresult.in';
 const LAST_UPDATED = '15 July 2026';
 
 const sections = [
@@ -13,7 +13,7 @@ const sections = [
     icon: FaShieldAlt,
     title: '1. Information We Collect',
     content: [
-      'We collect the following types of information when you use RankVeda:',
+      'We collect the following types of information when you use RankResult:',
       '',
       'Personal Information: When you register or log in via email or Google OAuth, we collect your name, email address, and profile picture (if provided by Google). This information is stored securely using Firebase Authentication.',
       '',
@@ -130,7 +130,7 @@ const sections = [
     icon: FaShieldAlt,
     title: '9. Children\'s Privacy',
     content: [
-      'RankVeda is not intended for users under the age of 13. We do not knowingly collect personal information from children. If we become aware that a child under 13 has provided us with personal data, we will delete it immediately. If you are a parent or guardian and believe your child has provided us with data, please contact us.',
+      'RankResult is not intended for users under the age of 13. We do not knowingly collect personal information from children. If we become aware that a child under 13 has provided us with personal data, we will delete it immediately. If you are a parent or guardian and believe your child has provided us with data, please contact us.',
     ],
   },
   {
@@ -140,8 +140,8 @@ const sections = [
       'In compliance with the Information Technology Act, 2000 and the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011, we have appointed a Grievance Officer:',
       '',
       'Name: Rahul Sriwastaw',
-      'Email: grievance@rankveda.in',
-      'Address: RankVeda Technologies, India',
+      'Email: grievance@rankresult.in',
+      'Address: RankResult Technologies, India',
       '',
       'Any complaints or concerns regarding data privacy or platform usage may be addressed to the Grievance Officer. We will acknowledge receipt of any complaint within 24 hours and resolve it within 30 days.',
     ],
@@ -150,7 +150,7 @@ const sections = [
     icon: FaShieldAlt,
     title: '11. Changes to This Privacy Policy',
     content: [
-      'We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last Updated" date. Material changes will be notified via email or a prominent notice on our platform. Your continued use of RankVeda after changes constitutes acceptance of the updated policy.',
+      'We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last Updated" date. Material changes will be notified via email or a prominent notice on our platform. Your continued use of RankResult after changes constitutes acceptance of the updated policy.',
     ],
   },
   {
@@ -159,9 +159,9 @@ const sections = [
     content: [
       'If you have any questions, concerns, or requests regarding this Privacy Policy, please contact us:',
       '',
-      'Email: support@rankveda.in',
-      'Grievance Officer: grievance@rankveda.in',
-      'Website: rankveda.in',
+      'Email: support@rankresult.in',
+      'Grievance Officer: grievance@rankresult.in',
+      'Website: rankresult.in',
     ],
   },
 ];
@@ -179,13 +179,13 @@ export default function PrivacyPage() {
   return (
     <>
       <Head>
-        <title>Privacy Policy | RankVeda — Your Data, Your Rights</title>
-        <meta name="description" content="RankVeda Privacy Policy explains how we collect, use, and protect your personal data in compliance with DPDP Act 2023, IT Act 2000, GDPR, and CCPA." />
-        <meta name="keywords" content="RankVeda privacy policy, data protection, DPDP Act 2023, IT Act 2000, GDPR, CCPA, privacy, data security" />
+        <title>Privacy Policy | RankResult — Your Data, Your Rights</title>
+        <meta name="description" content="RankResult Privacy Policy explains how we collect, use, and protect your personal data in compliance with DPDP Act 2023, IT Act 2000, GDPR, and CCPA." />
+        <meta name="keywords" content="RankResult privacy policy, data protection, DPDP Act 2023, IT Act 2000, GDPR, CCPA, privacy, data security" />
         <link rel="canonical" href={`${SITE_URL}/privacy`} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Privacy Policy | RankVeda" />
-        <meta property="og:description" content="How RankVeda protects your personal data in compliance with Indian and international privacy laws." />
+        <meta property="og:title" content="Privacy Policy | RankResult" />
+        <meta property="og:description" content="How RankResult protects your personal data in compliance with Indian and international privacy laws." />
         <meta property="og:url" content={`${SITE_URL}/privacy`} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </Head>
@@ -194,7 +194,7 @@ export default function PrivacyPage() {
         {/* NAV */}
         <nav className="border-b border-gray-800 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/" className="text-lg font-black gradient-text">⚡ RankVeda</Link>
+            <Link href="/" className="text-lg font-black gradient-text">⚡ RankResult</Link>
             <Link href="/" className="text-xs text-gray-500 hover:text-gray-300 transition">← Back to Home</Link>
           </div>
         </nav>

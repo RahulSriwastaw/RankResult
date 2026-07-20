@@ -292,7 +292,7 @@ def bulk_generate_solutions(result_id):
                 'difficulty': mq.difficulty if mq else None,
                 'likes': 0,
                 'user_id': user_id,
-                'user_name': 'RankVeda AI Engine',
+                'user_name': 'RankResult AI Engine',
                 'is_temporary': True,
             }
             results.append({'q_id': q_id, 'success': True, 'solution': solution})
