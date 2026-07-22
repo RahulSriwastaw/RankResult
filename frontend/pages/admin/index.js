@@ -1243,6 +1243,7 @@ function Results() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedResult, setSelectedResult] = useState(null);
   const [bulkSelected, setBulkSelected] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
 
   // Filter States
   const [exams, setExams] = useState([]);
@@ -1377,7 +1378,7 @@ function Results() {
           <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Score</p><p className="text-lg sm:text-xl font-bold text-indigo-400 mt-1">{r.score}</p></div>
           <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Rank</p><p className="text-lg sm:text-xl font-bold text-purple-400 mt-1">#{r.rank}</p></div>
           <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Percentile</p><p className="text-lg sm:text-xl font-bold text-pink-400 mt-1">{r.percentile}%</p></div>
-          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Category</p><p className="text-lg sm:text-xl font-bold text-amber-400 mt-1">{r.category}</p></div>
+          <div className="card p-3 text-center"><p className="text-xs text-[rgb(var(--muted-foreground))]">Category</p><p className="text-lg sm:text-xl font-bold text-amber-400 mt-1">{r.community || r.category || 'UR'}</p></div>
         </div>
         {/* Correct/Wrong/Unattempted - Mobile Friendly */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
@@ -1393,7 +1394,8 @@ function Results() {
                 <img
                   src={r.application_photograph}
                   alt={r.candidate_name}
-                  className="w-16 h-16 rounded-lg object-cover border border-[rgb(var(--border))]"
+                  onClick={() => setPreviewImage(r.application_photograph)}
+                  className="w-16 h-16 rounded-lg object-cover border border-[rgb(var(--border))] cursor-pointer hover:opacity-85 transition-opacity"
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
@@ -1408,9 +1410,29 @@ function Results() {
                 <p className="text-xs text-[rgb(var(--muted-foreground))] mt-0.5">{r.candidate_name || 'Anonymous'}</p>
               </div>
             </div>
-            <div className="space-y-1.5 text-sm">{[['Registration', r.registration_number], ['Roll No', r.roll_number], ['Name', r.candidate_name], ['Community', r.community], ['Test Centre', r.test_centre_name], ['Test Date', r.test_date], ['Test Time', r.test_time], ['Subject', r.subject]].map(([label, val]) => (
-              <div key={label} className="flex justify-between"><span className="text-[rgb(var(--muted-foreground))]">{label}</span><span className="text-right">{val || '\u2014'}</span></div>
-            ))}</div>
+            <div className="space-y-1.5 text-sm">
+              {[['Registration', r.registration_number], ['Roll No', r.roll_number], ['Name', r.candidate_name], ['Community', r.community], ['Test Centre', r.test_centre_name], ['Test Date', r.test_date], ['Test Time', r.test_time], ['Subject', r.subject]].map(([label, val]) => (
+                <div key={label} className="flex justify-between"><span className="text-[rgb(var(--muted-foreground))]">{label}</span><span className="text-right">{val || '\u2014'}</span></div>
+              ))}
+              {r.input_url && (
+                <div className="flex flex-col gap-1 pt-2 border-t border-[rgb(var(--border))] mt-2">
+                  <span className="text-xs text-[rgb(var(--muted-foreground))]">Input URL</span>
+                  <div className="flex items-center gap-1.5 bg-[rgb(var(--accent))/0.3] p-1.5 rounded-lg border border-[rgb(var(--border))]">
+                    <span className="text-xs truncate flex-1 font-mono select-all text-left">{r.input_url}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(r.input_url);
+                        alert('URL copied to clipboard!');
+                      }}
+                      title="Copy URL"
+                      className="btn-ghost p-1 text-[rgb(var(--primary))] shrink-0 hover:bg-[rgb(var(--accent))]"
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           {sections.length > 0 && <div className="card p-4"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><FaChartBar className="text-indigo-400" /> Section-wise</h3>
             <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="text-xs text-[rgb(var(--muted-foreground))]"><tr><th className="px-2 py-2 text-left">Section</th><th className="px-2 py-2 text-center">Total</th><th className="px-2 py-2 text-center">Right</th><th className="px-2 py-2 text-center">Wrong</th><th className="px-2 py-2 text-center">Marks</th></tr></thead><tbody>{sections.map((sec, i) => (
@@ -1521,7 +1543,8 @@ function Results() {
                     <img
                       src={r.application_photograph}
                       alt={r.candidate_name}
-                      className="w-7 h-7 rounded-full object-cover border border-[rgb(var(--border))]"
+                      onClick={() => setPreviewImage(r.application_photograph)}
+                      className="w-7 h-7 rounded-full object-cover border border-[rgb(var(--border))] cursor-pointer hover:opacity-85 transition-opacity"
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   ) : (
@@ -1535,6 +1558,19 @@ function Results() {
               <td className="table-cell">
                 <div className="text-xs font-mono">{r.roll_number}</div>
                 {r.registration_number && <div className="text-[10px] text-[rgb(var(--muted-foreground))] font-mono">Reg: {r.registration_number}</div>}
+                {r.input_url && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(r.input_url);
+                        alert('URL copied to clipboard!');
+                      }}
+                      className="text-[10px] text-[rgb(var(--primary))] hover:underline flex items-center gap-0.5"
+                    >
+                      🔗 Copy URL
+                    </button>
+                  </div>
+                )}
               </td>
               <td className="table-cell text-xs text-[rgb(var(--muted-foreground))] max-w-[120px] truncate" title={r.subject}>
                 {r.subject || '—'}
@@ -1542,7 +1578,7 @@ function Results() {
               <td className="table-cell font-semibold">{r.score}</td>
               <td className="table-cell text-purple-400">#{r.rank}</td>
               <td className="table-cell">{r.percentile}%</td>
-              <td className="table-cell"><span className="badge-info">{r.category}</span></td>
+              <td className="table-cell"><span className="badge-info">{r.community || r.category || 'UR'}</span></td>
               <td className="table-cell">{r.questions_count}</td>
               <td className="table-cell text-xs text-[rgb(var(--muted-foreground))]">{new Date(r.created_at).toLocaleDateString()}</td>
               <td className="table-cell"><div className="flex gap-1"><button onClick={() => fetchResultDetail(r.id)} className="btn-ghost p-1.5"><FaEye size={14} /></button><button onClick={() => deleteResult(r.id)} className="btn-ghost p-1.5 text-red-400"><FaTrash size={14} /></button></div></td>
@@ -1551,6 +1587,39 @@ function Results() {
         </table>
       </div>
       {totalPages > 0 && <TablePagination page={page} totalPages={totalPages} perPage={20} setPerPage={() => {}} setPage={setPage} />}
+      
+      {/* Image Preview Modal */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-[4px] flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="relative max-w-lg w-full bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl p-2 cursor-default"
+            >
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="absolute top-4 right-4 bg-black/60 text-white rounded-full p-2 hover:bg-black/80 transition"
+              >
+                <FaTimes size={16} />
+              </button>
+              <img
+                src={previewImage}
+                alt="Candidate Profile"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-xl mx-auto"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

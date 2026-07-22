@@ -79,6 +79,23 @@ export default function PackAnalysis() {
   const [packQuestionsPages, setPackQuestionsPages] = useState(1);
   const [packQuestionsTotal, setPackQuestionsTotal] = useState(0);
 
+  const [exportFormat, setExportFormat] = useState('csv');
+  const [pdfSortOrder, setPdfSortOrder] = useState('sequential');
+  const [pdfShowCorrect, setPdfShowCorrect] = useState(true);
+  const [pdfShowStats, setPdfShowStats] = useState(true);
+  const [pdfShowSolution, setPdfShowSolution] = useState(true);
+  const [pdfLanguage, setPdfLanguage] = useState('both');
+  const [pdfQuestionLimit, setPdfQuestionLimit] = useState('');
+  const [pdfBrandName, setPdfBrandName] = useState('');
+  const [csvLanguage, setCsvLanguage] = useState('both');
+  const [csvColumns, setCsvColumns] = useState([
+    'question_id', 'question_number', 'exam_name', 'subject', 'topic', 'chapter',
+    'question_type', 'difficulty_label', 'question_text', 'question_html_raw',
+    'option_a', 'option_b', 'option_c', 'option_d', 'correct_option', 'solution_text',
+    'shift_date', 'shift_time', 'correct_percent', 'wrong_percent'
+  ]);
+  const [exporting, setExporting] = useState(false);
+
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
   // Fetch analysis data
@@ -219,6 +236,89 @@ export default function PackAnalysis() {
     } catch (err) {
       console.error(err);
       alert('Network error while exporting questions');
+    }
+  };
+
+  const handleToggleColumn = (col) => {
+    setCsvColumns(prev => 
+      prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
+    );
+  };
+
+  const handleGenerateExport = async () => {
+    if (!questionFilters.exam_id) {
+      alert('Please select a Target Exam first.');
+      return;
+    }
+    setExporting(true);
+    try {
+      const isCsv = exportFormat === 'csv';
+      const endpoint = isCsv ? '/api/export/questions/csv' : '/api/export/questions/pdf';
+      
+      const payload = isCsv ? {
+        examId: questionFilters.exam_id,
+        filters: {
+          search: questionFilters.search,
+          subject: questionFilters.subject,
+          shift_date: questionFilters.shift_date,
+          shift_time: questionFilters.shift_time,
+          chapter: questionFilters.chapter,
+          difficulty: questionFilters.difficulty,
+          question_type: questionFilters.question_type,
+          language: csvLanguage
+        },
+        columns: csvColumns
+      } : {
+        examId: questionFilters.exam_id,
+        filters: {
+          search: questionFilters.search,
+          subject: questionFilters.subject,
+          shift_date: questionFilters.shift_date,
+          shift_time: questionFilters.shift_time,
+          chapter: questionFilters.chapter,
+          difficulty: questionFilters.difficulty,
+          question_type: questionFilters.question_type
+        },
+        sortOrder: pdfSortOrder,
+        showCorrectHighlight: pdfShowCorrect,
+        showStatsBar: pdfShowStats,
+        showSolution: pdfShowSolution,
+        language: pdfLanguage,
+        questionLimit: pdfQuestionLimit ? parseInt(pdfQuestionLimit, 10) : null,
+        brandName: pdfBrandName || orgName || 'RankMitra'
+      };
+
+      const response = await fetch(`${API}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error || 'Failed to generate export file');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = isCsv 
+        ? `questions_export_${questionFilters.exam_id}.csv`
+        : `branded_questions_${questionFilters.exam_id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Error exporting questions');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -742,23 +842,15 @@ export default function PackAnalysis() {
                 <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-sm font-semibold">📦 Pack Question Export</h3>
-                      <p className="text-xs text-gray-500">Choose the exam and question filters, then preview or export.</p>
+                      <h3 className="text-sm font-semibold">📦 Question Filters</h3>
+                      <p className="text-xs text-gray-500">Apply search keywords or category filters to filter results.</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => fetchPackQuestions(1)}
-                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
-                      >
-                        Preview
-                      </button>
-                      <button
-                        onClick={handleExportPackQuestions}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
-                      >
-                        Export CSV
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => fetchPackQuestions(1)}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
+                    >
+                      Preview Qs
+                    </button>
                   </div>
 
                   <div className="space-y-4">
@@ -856,6 +948,196 @@ export default function PackAnalysis() {
                         className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+                  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-indigo-400">
+                    ⚙️ Export Settings
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1.5">Export Format</label>
+                      <div className="flex border border-gray-800 rounded-xl p-1 bg-gray-950">
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('csv')}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                            exportFormat === 'csv'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          📄 CSV Format
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('pdf')}
+                          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition ${
+                            exportFormat === 'pdf'
+                              ? 'bg-indigo-600 text-white shadow-md'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          📕 Branded PDF
+                        </button>
+                      </div>
+                    </div>
+
+                    {exportFormat === 'pdf' ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Brand Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. RankMitra"
+                            value={pdfBrandName}
+                            onChange={(e) => setPdfBrandName(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Language</label>
+                            <select
+                              value={pdfLanguage}
+                              onChange={(e) => setPdfLanguage(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                            >
+                              <option value="both">Bilingual</option>
+                              <option value="hi">Hindi</option>
+                              <option value="en">English</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Sort Order</label>
+                            <select
+                              value={pdfSortOrder}
+                              onChange={(e) => setPdfSortOrder(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                            >
+                              <option value="sequential">Sequential</option>
+                              <option value="hard_to_easy">Hard → Easy</option>
+                              <option value="easy_to_hard">Easy → Hard</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Questions Limit</label>
+                            <input
+                              type="number"
+                              placeholder="All"
+                              value={pdfQuestionLimit}
+                              onChange={(e) => setPdfQuestionLimit(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-gray-800/80">
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pdfShowCorrect}
+                              onChange={(e) => setPdfShowCorrect(e.target.checked)}
+                              className="accent-indigo-600 rounded border-gray-700"
+                            />
+                            <span>Highlight Correct Answer</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pdfShowStats}
+                              onChange={(e) => setPdfShowStats(e.target.checked)}
+                              className="accent-indigo-600 rounded border-gray-700"
+                            />
+                            <span>Show Stats Bar (% correct)</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={pdfShowSolution}
+                              onChange={(e) => setPdfShowSolution(e.target.checked)}
+                              className="accent-indigo-600 rounded border-gray-700"
+                            />
+                            <span>Show Explanations</span>
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">CSV Language</label>
+                          <select
+                            value={csvLanguage}
+                            onChange={(e) => setCsvLanguage(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                          >
+                            <option value="both">Both (Hindi & English)</option>
+                            <option value="hi">Hindi</option>
+                            <option value="en">English</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Fields to Export</label>
+                          <div className="bg-gray-950 border border-gray-800 rounded-xl p-3 max-h-48 overflow-y-auto space-y-1.5">
+                            {[
+                              { id: 'question_id', label: 'Question ID' },
+                              { id: 'question_number', label: 'Question Number' },
+                              { id: 'exam_name', label: 'Exam Name' },
+                              { id: 'subject', label: 'Subject' },
+                              { id: 'topic', label: 'Topic / Chapter' },
+                              { id: 'question_type', label: 'Question Type' },
+                              { id: 'difficulty_label', label: 'Difficulty Label' },
+                              { id: 'question_text', label: 'Question Text' },
+                              { id: 'question_html_raw', label: 'Question HTML Raw' },
+                              { id: 'option_a', label: 'Option A' },
+                              { id: 'option_b', label: 'Option B' },
+                              { id: 'option_c', label: 'Option C' },
+                              { id: 'option_d', label: 'Option D' },
+                              { id: 'correct_option', label: 'Correct Option' },
+                              { id: 'solution_text', label: 'Solution Text' },
+                              { id: 'shift_date', label: 'Shift Date' },
+                              { id: 'shift_time', label: 'Shift Time' },
+                              { id: 'correct_percent', label: 'Correct %' },
+                              { id: 'wrong_percent', label: 'Wrong %' }
+                            ].map((col) => (
+                              <label key={col.id} className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={csvColumns.includes(col.id)}
+                                  onChange={() => handleToggleColumn(col.id)}
+                                  className="accent-indigo-600 rounded border-gray-700"
+                                />
+                                <span>{col.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleGenerateExport}
+                      disabled={exporting}
+                      className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/10"
+                    >
+                      {exporting ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Generating Export...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>📥 Download Branded {exportFormat === 'csv' ? 'CSV' : 'PDF'}</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

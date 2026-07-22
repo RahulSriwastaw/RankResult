@@ -11,6 +11,7 @@ from routes.auth import auth_bp
 from routes.marketplace import marketplace_bp
 from routes.public_exams import public_exams_bp
 from routes.blog import blog_bp
+from routes.export import export_bp
 import stripe
 
 def create_app():
@@ -33,6 +34,7 @@ def create_app():
     app.register_blueprint(marketplace_bp)
     app.register_blueprint(public_exams_bp)
     app.register_blueprint(blog_bp)
+    app.register_blueprint(export_bp)
 
     
     # Error handlers

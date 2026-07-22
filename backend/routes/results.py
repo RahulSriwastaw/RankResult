@@ -13,6 +13,7 @@ results_bp = Blueprint('results', __name__, url_prefix='/api/results')
 
 @results_bp.route('', methods=['POST'])
 @results_bp.route('/', methods=['POST'])
+@results_bp.route('/calculate', methods=['POST'])
 def get_result_from_url():
     from routes.auth import get_current_user
     current_user = get_current_user()
@@ -99,6 +100,9 @@ def get_result_from_url():
                 # fall through to re-parse and insert
             else:
                 print(f"[API] Returning cached result with {len(questions)} questions")
+                if not existing_result.input_url and url:
+                    existing_result.input_url = url
+                    db.session.commit()
                 return jsonify({
                     'result': existing_result.to_dict(),
                     'questions': [q.to_dict(unlocked_mq_ids) for q in questions]
@@ -135,6 +139,7 @@ def get_result_from_url():
                 exam_id=exam_id,
                 registration_number=registration_number,
                 roll_number=rn,
+                input_url=url,
                 candidate_name=parsed.get('candidate_name'),
                 community=parsed.get('community'),
                 test_centre_name=parsed.get('test_centre_name'),
@@ -145,13 +150,13 @@ def get_result_from_url():
                 application_photograph=parsed.get('application_photograph') or parsed.get('photo_url'),
                 candidate_payload=parsed.get('candidate_payload') or {},
                 source_html=parsed.get('source_html'),
-                parser_version=parsed.get('parser_version', 'rankresult-parser-v1.0'),
+                parser_version=parsed.get('parser_version', 'rankveda-parser-v1.0'),
                 parsed_at=parsed_at,
                 score=parsed.get('score', 0) or 0,
                 rank=parsed.get('rank', 0) or 0,
                 percentile=parsed.get('percentile', 0) or 0,
                 category_rank=parsed.get('category_rank', 0) or 0,
-                category=parsed.get('category', 'UR') or 'UR',
+                category=parsed.get('category') or parsed.get('community') or 'UR',
                 section_wise=parsed.get('section_wise', {}) or {},
                 total_correct=parsed.get('total_correct', 0),
                 total_wrong=parsed.get('total_wrong', 0),
@@ -776,6 +781,7 @@ def upload_pdf_result():
                 registration_number=registration_number,
                 candidate_name=parsed_data.get('candidate_name') or 'Candidate ' + str(uuid.uuid4())[:8],
                 community=parsed_data.get('community') or 'UR',
+                category=parsed_data.get('community') or 'UR',
                 test_centre_name=parsed_data.get('test_centre_name') or '',
                 test_date=parsed_data.get('test_date') or '',
                 test_time=parsed_data.get('test_time') or '',

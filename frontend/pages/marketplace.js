@@ -620,21 +620,30 @@ export default function Marketplace() {
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 text-center">
                         <div className="text-[9px] font-black text-slate-400 uppercase">Questions</div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{exam.question_count || 0}</div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{maskMetric(exam.question_count, exam.is_purchased)}</div>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-2.5 text-center">
                         <div className="text-[9px] font-black text-slate-400 uppercase">Students</div>
-                        <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{exam.student_count || 0}</div>
+                        <div className="text-xs font-black text-slate-900 dark:text-white mt-0.5">{maskMetric(exam.student_count, exam.is_purchased)}</div>
                       </div>
                     </div>
                   </div>
 
                   {exam.is_purchased ? (
-                    <button onClick={() => openExam(exam)} className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs transition shadow-sm">
-                      Explore Question Bank
-                    </button>
+                    <div className="flex flex-col gap-2 mt-4 w-full">
+                      <button onClick={() => openExam(exam)} className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs transition shadow-sm">
+                        Explore Question Bank
+                      </button>
+                      {exam.pack_id && (
+                        <Link href={`/marketplace/packs/${exam.pack_id}/analysis`} className="w-full">
+                          <button className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition shadow-sm">
+                            View Shift Analysis
+                          </button>
+                        </Link>
+                      )}
+                    </div>
                   ) : (
-                    <button onClick={() => buyItem(exam, 'exam')} className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-sm">
+                    <button onClick={() => buyItem(exam, 'exam')} className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition shadow-sm mt-4">
                       Unlock Exam Pack (₹{exam.price || 0} INR)
                     </button>
                   )}

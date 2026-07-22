@@ -120,6 +120,8 @@ def list_marketplace_exams():
     try:
         exams = Exam.query.order_by(desc(Exam.date)).all()
         current_user = get_current_user()
+        all_mqs = MasterQuestion.query.all()
+        all_packs = QuestionPack.query.filter_by(is_active=True).all()
 
         result = []
         for exam in exams:
@@ -129,6 +131,13 @@ def list_marketplace_exams():
             ).filter(
                 ExamResult.exam_id == exam.id
             ).distinct().count()
+
+            # Calculate total stored questions across all shifts of this exam
+            total_stored_questions = 0
+            for mq in all_mqs:
+                for s in (mq.shifts or []):
+                    if str(s.get('exam_id')) == str(exam.id):
+                        total_stored_questions += 1
 
             # Get unique subjects and dates (shifts) from ExamResult
             results_info = db.session.query(
@@ -141,14 +150,39 @@ def list_marketplace_exams():
             dates = {r[1] for r in results_info if r[1]}
 
             # Fallback to exam.total_questions if no results have been uploaded yet
-            display_questions = total_questions if total_questions > 0 else (exam.total_questions or 100)
+            display_questions = total_stored_questions if total_stored_questions > 0 else (exam.total_questions or 100)
 
-            # Check if current user has purchased
+            # Find matching pack for this exam
+            matching_pack = None
+            for p in all_packs:
+                p_exam_ids = []
+                for item in (p.exam_ids or []):
+                    if isinstance(item, dict):
+                        p_exam_ids.append(int(item.get('exam_id')))
+                    elif item is not None:
+                        p_exam_ids.append(int(item))
+                if len(p_exam_ids) == 1 and p_exam_ids[0] == exam.id:
+                    matching_pack = p
+                    break
+            if not matching_pack:
+                for p in all_packs:
+                    p_exam_ids = []
+                    for item in (p.exam_ids or []):
+                        if isinstance(item, dict):
+                            p_exam_ids.append(int(item.get('exam_id')))
+                        elif item is not None:
+                            p_exam_ids.append(int(item))
+                    if exam.id in p_exam_ids:
+                        matching_pack = p
+                        break
+
+            # Check if current user has purchased (direct or via packs)
             purchased = False
             if current_user:
-                purchased = ExamPurchase.query.filter_by(
-                    user_id=current_user.id, exam_id=exam.id
-                ).first() is not None
+                purchased = has_exam_questions_access(current_user.id, exam.id)
+
+            # Calculate student count
+            student_count = ExamResult.query.filter_by(exam_id=exam.id).count()
 
             result.append({
                 'id': exam.id,
@@ -159,6 +193,11 @@ def list_marketplace_exams():
                 'shifts': max(len(dates), 1) if results_info else 0,
                 'subjects': list(subjects),
                 'purchased': purchased,
+                'is_purchased': purchased,
+                'shift_count': max(len(dates), 1) if results_info else 0,
+                'question_count': display_questions,
+                'student_count': student_count,
+                'pack_id': matching_pack.id if matching_pack else None,
             })
 
         return jsonify({'exams': result})

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ exam.name }} - Practice Sheet</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', 'Noto Sans Devanagari', 'Lohit Devanagari', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      background-color: #ffffff;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    
+    .header {
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 24px 20px;
+      text-align: center;
+      margin-bottom: 24px;
+      border-bottom: 4px solid #4f46e5;
+    }
+    
+    .header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    
+    .header p {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .content {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+    
+    .question-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 20px;
+      background-color: #ffffff;
+      page-break-inside: avoid;
+    }
+    
+    .question-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+      color: #0f172a;
+      line-height: 1.6;
+    }
+    
+    .q-num {
+      color: #e11d48;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .q-text {
+      flex-grow: 1;
+    }
+    
+    .q-text img {
+      max-height: 35px;
+      vertical-align: middle;
+      margin: 2px 4px;
+    }
+    
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+      margin-top: 10px;
+    }
+    
+    .option-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background-color: #f8fafc;
+      color: #334155;
+    }
+    
+    .option-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: #e2e8f0;
+      color: #475569;
+      font-weight: 700;
+      font-size: 10.5px;
+      flex-shrink: 0;
+    }
+    
+    /* Highlight Correct Option */
+    .option-card.correct {
+      background-color: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+    
+    .option-card.correct .option-badge {
+      background-color: #22c55e;
+      color: #ffffff;
+    }
+    
+    .stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    
+    .stat-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .pill-correct {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+    
+    .pill-wrong {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    
+    .pill-date {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+    }
+    
+    .pill-time {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .solution-block {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background-color: #fdfaf2;
+      border-left: 3px solid #d97706;
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      color: #78350f;
+    }
+
+    .solution-title {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      color: #b45309;
+    }
+    
+    .footer {
+      text-align: center;
+      padding: 20px 0;
+      font-size: 10.5px;
+      color: #94a3b8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 30px;
+      page-break-after: avoid;
+    }
+    
+    .footer a {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .question-card {
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: none !important;
+      }
+      .header {
+        border-bottom: 3px solid #000000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>{{ exam.name }} Question Paper</h1>
+    <p>
+      {% if language == 'hi' %}Hindi
+      {% elif language == 'en' %}English
+      {% else %}Bilingual (Hindi / English)
+      {% endif %}
+      · Sort: {{ sort_order_label }}
+      {% if brand_name %} · By {{ brand_name }}{% endif %}
+    </p>
+  </div>
+
+  <div class="content">
+    {% for q in questions %}
+      <div class="question-card">
+        <div class="question-title">
+          <span class="q-num">{{ q.index }}.</span>
+          <div class="q-text">
+            {% if language == 'both' %}
+              <div style="margin-bottom: 6px; font-weight: 500;">{{ q.question_text_hin | safe }}</div>
+              <div style="color: #475569; font-size: 12.5px; border-top: 1px dashed #f1f5f9; padding-top: 6px;">{{ q.question_text_eng | safe }}</div>
+            {% elif language == 'hi' %}
+              {{ q.question_text_hin | safe }}
+            {% else %}
+              {{ q.question_text_eng | safe }}
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="options-grid">
+          {% for letter in ['A', 'B', 'C', 'D'] %}
+            {% set is_correct = (show_correct and q.correct_option == letter) %}
+            <div class="option-card {% if is_correct %}correct{% endif %}">
+              <span class="option-badge">{{ letter }}</span>
+              <span>
+                {% if language == 'both' %}
+                  {{ q['option_' ~ letter|lower ~ '_hin'] | safe }} / <span style="color: #64748b;">{{ q['option_' ~ letter|lower ~ '_eng'] | safe }}</span>
+                {% elif language == 'hi' %}
+                  {{ q['option_' ~ letter|lower ~ '_hin'] | safe }}
+                {% else %}
+                  {{ q['option_' ~ letter|lower ~ '_eng'] | safe }}
+                {% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+        
+        {% if show_stats %}
+          <div class="stats-bar">
+            <span class="stat-pill pill-correct">{{ q.correct_percent }}% correct</span>
+            <span class="stat-pill pill-wrong">{{ q.wrong_percent }}% wrong</span>
+            {% if q.shift_date %}
+              <span class="stat-pill pill-date">{{ q.shift_date }}</span>
+            {% endif %}
+            {% if q.shift_time %}
+              <span class="stat-pill pill-time">{{ q.shift_time }}</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if show_solution and q.solution_text %}
+          <div class="solution-block">
+            <div class="solution-title">Explanation / Solution:</div>
+            <div>
+              {% if language == 'both' %}
+                <div style="margin-bottom: 4px;">{{ q.solution_hin | safe }}</div>
+                <div style="border-top: 1px dashed #f5efe6; padding-top: 4px; color: #5c4d3c;">{{ q.solution_eng | safe }}</div>
+              {% elif language == 'hi' %}
+                {{ q.solution_hin | safe }}
+              {% else %}
+                {{ q.solution_eng | safe }}
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="footer">
+    {% if brand_name %}
+      Generated By <a href="#">{{ brand_name }}</a> · Powered by RankResult
+    {% else %}
+      Powered by <a href="https://rankresult.in">RankResult.in</a>
+    {% endif %}
+  </div>
+
+</body>
+</html>

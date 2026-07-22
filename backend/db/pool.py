@@ -68,6 +68,7 @@ def init_db(app):
                 'source_html': 'source_html TEXT',
                 'parser_version': 'parser_version VARCHAR(50)',
                 'parsed_at': 'parsed_at DATETIME',
+                'input_url': 'input_url TEXT',
             })
             _ensure_columns('question_responses', {
                 'parsed_payload': 'parsed_payload JSON',

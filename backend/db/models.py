@@ -157,6 +157,7 @@ class ExamResult(db.Model):
     # Candidate Info
     registration_number = db.Column(db.String(50))
     roll_number = db.Column(db.String(50), nullable=True)
+    input_url = db.Column(db.Text, nullable=True)
     candidate_name = db.Column(db.String(200))
     community = db.Column(db.String(50))
     test_centre_name = db.Column(db.String(300))
@@ -194,6 +195,7 @@ class ExamResult(db.Model):
             'exam_id': self.exam_id,
             'registration_number': self.registration_number,
             'roll_number': self.roll_number,
+            'input_url': self.input_url,
             'candidate_name': self.candidate_name,
             'community': self.community,
             'test_centre_name': self.test_centre_name,
